@@ -8,33 +8,7 @@ export function useRouting() {
   const [routeStatus, setRouteStatus] = useState('Waiting for input...');
   const [routeColor, setRouteColor] = useState('#8b9bb4');
 
-  const handleMapClick = useCallback(
-    (coordinate: [number, number], intensity: number) => {
-      setClickPoints((prev) => {
-        let updated: [number, number][];
-        if (prev.length >= 2) {
-          updated = [coordinate];
-          setRouteCoords(null);
-          setRouteStatus('Click destination on the map...');
-          setRouteColor('#8b9bb4');
-        } else {
-          updated = [...prev, coordinate];
-        }
-
-        if (updated.length === 1) {
-          setRouteStatus('Click destination on the map...');
-          setRouteColor('#8b9bb4');
-        } else if (updated.length === 2) {
-          calculateRoute(updated[0], updated[1], intensity);
-        }
-
-        return updated;
-      });
-    },
-    []
-  );
-
-  const calculateRoute = async (
+  const calculateRoute = useCallback(async (
     start: [number, number],
     end: [number, number],
     intensity: number
@@ -71,18 +45,42 @@ export function useRouting() {
       setRouteStatus('Error calculating route.');
       setRouteColor('#ff3366');
     }
-  };
+  }, []);
+
+  const handleMapClick = useCallback(
+    (coordinate: [number, number], intensity: number) => {
+      setClickPoints((prev) => {
+        let updated: [number, number][];
+        if (prev.length >= 2) {
+          updated = [coordinate];
+          setRouteCoords(null);
+          setRouteStatus('Click destination on the map...');
+          setRouteColor('#8b9bb4');
+        } else {
+          updated = [...prev, coordinate];
+        }
+
+        if (updated.length === 1) {
+          setRouteStatus('Click destination on the map...');
+          setRouteColor('#8b9bb4');
+        } else if (updated.length === 2) {
+          // Trigger calculation outside of setClickPoints to be safe
+          setTimeout(() => calculateRoute(updated[0], updated[1], intensity), 0);
+        }
+
+        return updated;
+      });
+    },
+    [calculateRoute]
+  );
 
   const recalculateRoute = useCallback(
     (intensity: number) => {
-      setClickPoints((prev) => {
-        if (prev.length === 2) {
-          calculateRoute(prev[0], prev[1], intensity);
-        }
-        return prev;
-      });
+      if (clickPoints.length === 2) {
+        calculateRoute(clickPoints[0], clickPoints[1], intensity);
+      }
     },
-    []
+    [calculateRoute, clickPoints]
   );
 
   const clearRoute = useCallback(() => {

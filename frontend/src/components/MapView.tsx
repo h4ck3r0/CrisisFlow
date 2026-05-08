@@ -17,6 +17,7 @@ interface MapViewProps {
   clickPoints: [number, number][];
   routeCoords: number[][] | null;
   onMapClick: (coordinate: [number, number]) => void;
+  currentPoint: [number, number] | null;
 }
 
 const ambientLight = new AmbientLight({
@@ -51,6 +52,7 @@ export default function MapView({
   clickPoints,
   routeCoords,
   onMapClick,
+  currentPoint,
 }: MapViewProps) {
   const layers = useMemo(() => {
     const allLayers = [
@@ -60,7 +62,10 @@ export default function MapView({
         filled: true,
         extruded: is3D,
         wireframe: is3D,
-        getElevation: (d: any) => (d.properties?.height || 10),
+        getElevation: (d: unknown) => {
+          const feature = d as { properties?: { height?: number } };
+          return feature.properties?.height || 10;
+        },
         getFillColor: is3D
           ? [45, 55, 95, 240]
           : [20, 25, 40, 80],
@@ -151,9 +156,9 @@ export default function MapView({
         radiusMinPixels: 10,
         radiusMaxPixels: 16,
         lineWidthMinPixels: 3,
-        getPosition: (d: any) => d.pos,
+        getPosition: (d: { pos: [number, number]; type: number }) => d.pos,
         getRadius: 30,
-        getFillColor: (d: any) =>
+        getFillColor: (d: { pos: [number, number]; type: number }) =>
           d.type === 0 ? [0, 255, 130, 255] : [255, 80, 80, 255],
         getLineColor: [255, 255, 255, 220],
       }),
@@ -164,7 +169,7 @@ export default function MapView({
         pickable: false,
         widthMinPixels: 14,
         widthMaxPixels: 20,
-        getPath: (d: any) => d.path,
+        getPath: (d: { path: number[][] }) => d.path,
         getColor: [0, 180, 255, 50],
         getWidth: 14,
         rounded: true,
@@ -176,36 +181,53 @@ export default function MapView({
         pickable: false,
         widthMinPixels: 5,
         widthMaxPixels: 8,
-        getPath: (d: any) => d.path,
+        getPath: (d: { path: number[][] }) => d.path,
         getColor: [0, 180, 255, 240],
         getWidth: 5,
         rounded: true,
       }),
+
+      new ScatterplotLayer({
+        id: 'report-marker',
+        data: currentPoint ? [{ pos: currentPoint }] : [],
+        pickable: false,
+        opacity: 0.8,
+        stroked: true,
+        filled: true,
+        radiusMinPixels: 8,
+        radiusMaxPixels: 12,
+        lineWidthMinPixels: 2,
+        getPosition: (d: { pos: [number, number] }) => d.pos,
+        getRadius: 20,
+        getFillColor: [255, 255, 0, 200],
+        getLineColor: [255, 255, 255, 255],
+      }),
     ];
 
     return allLayers;
-  }, [is3D, activeFloodPoints, emergencyData, clickPoints, routeCoords]);
+  }, [is3D, activeFloodPoints, emergencyData, clickPoints, routeCoords, currentPoint]);
 
   const effects = useMemo(() => (is3D ? [lightingEffect] : []), [is3D]);
 
-  const getTooltip = ({ object }: any) => {
+  const getTooltip = ({ object }: { object?: Record<string, unknown> }) => {
     if (!object) return null;
     if (object.depth !== undefined) {
+      const depth = object.depth as number;
       let status = 'Safe';
       let color = '#4ade80';
-      if (object.depth > 10) {
+      if (depth > 10) {
         status = 'CRITICAL';
         color = '#ff2244';
-      } else if (object.depth > 5) {
+      } else if (depth > 5) {
         status = 'HIGH RISK';
         color = '#ff8800';
-      } else if (object.depth > 2) {
+      } else if (depth > 2) {
         status = 'MODERATE';
         color = '#ffcc00';
       }
       return {
         html: `<div style="font-family:Inter,sans-serif">
-          <strong style="color:${color};font-size:18px;font-family:Outfit,sans-serif">${object.depth.toFixed(1)} cm</strong><br/>
+          <strong style="color:${color};font-size:18px;font-family:Outfit,sans-serif">${depth.toFixed(1)} cm</strong><br/>
           <span style="color:#8b9bb4;font-size:11px;text-transform:uppercase">Water Depth</span><br/>
           <span style="color:${color};font-weight:600;font-size:12px">${status}</span>
         </div>`,
@@ -236,20 +258,21 @@ export default function MapView({
         },
       };
     }
-    if (object.properties?.name) return object.properties.name;
+    const properties = object.properties as Record<string, unknown> | undefined;
+    if (properties?.name) return properties.name as string;
     return null;
   };
 
   return (
     <DeckGL
       viewState={viewState}
-      onViewStateChange={({ viewState: vs }: any) => onViewStateChange(vs)}
+      onViewStateChange={({ viewState: vs }: { viewState: ViewState }) => onViewStateChange(vs)}
       controller={true}
       layers={layers}
       effects={effects}
-      onClick={(info: any) => {
+      onClick={(info: { coordinate?: [number, number] }) => {
         if (info.coordinate) {
-          onMapClick(info.coordinate as [number, number]);
+          onMapClick(info.coordinate);
         }
       }}
       getTooltip={getTooltip}

@@ -2,6 +2,8 @@ import { useState, useMemo, useCallback } from 'react';
 import MapView from './components/MapView';
 import ControlPanel from './components/ControlPanel';
 import RainEffect from './components/RainEffect';
+import TopRightNav, { type NavTab } from './components/TopRightNav';
+import BottomRightPanel, { type Report } from './components/BottomRightPanel';
 import { useFloodSimulation } from './hooks/useFloodSimulation';
 import { useWeather } from './hooks/useWeather';
 import { useRouting } from './hooks/useRouting';
@@ -13,11 +15,35 @@ import {
 } from './constants';
 import type { FloodPoint, GovStats, ViewState } from './types';
 
+const DUMMY_REPORTS: Report[] = [
+  {
+    id: '1',
+    type: 'police',
+    description: 'Traffic congestion due to water logging near main junction.',
+    location: [77.63, 12.95],
+    timestamp: new Date(Date.now() - 1000 * 60 * 15),
+  },
+  {
+    id: '2',
+    type: 'hospital',
+    description: 'Medical emergency: Elderly person needs evacuation.',
+    location: [77.62, 12.94],
+    timestamp: new Date(Date.now() - 1000 * 60 * 45),
+  },
+];
+
 function App() {
   const [viewState, setViewState] = useState<ViewState>(INITIAL_VIEW_STATE);
   const [is3D, setIs3D] = useState(false);
   const [intensity, setIntensity] = useState(0.5);
   const [currentTimestep, setCurrentTimestep] = useState(-1);
+
+  // New states for User/Gov/Police/Hospital
+  const [activeTab, setActiveTab] = useState<NavTab>('user');
+  const [reports, setReports] = useState<Report[]>(DUMMY_REPORTS);
+  const [isSettingLocation, setIsSettingLocation] = useState(false);
+  const [currentPoint, setCurrentPoint] = useState<[number, number] | null>(null);
+  const [alert, setAlert] = useState<string | null>(null);
 
   const { floodPoints, floodTimeline, computing, computeTime, simulate, clearSimulation } =
     useFloodSimulation();
@@ -120,10 +146,35 @@ function App() {
 
   const onMapClick = useCallback(
     (coordinate: [number, number]) => {
-      handleMapClick(coordinate, intensity);
+      if (isSettingLocation) {
+        setCurrentPoint(coordinate);
+        setIsSettingLocation(false);
+      } else {
+        handleMapClick(coordinate, intensity);
+      }
     },
-    [handleMapClick, intensity]
+    [handleMapClick, intensity, isSettingLocation]
   );
+
+  const handleTabChange = useCallback((tab: NavTab) => {
+    setActiveTab(tab);
+    if (tab === 'gov') {
+      setIntensity((prev) => Math.min(prev + 0.2, 1.0));
+      setAlert('⚠️ GOVERNMENT EMERGENCY: Storm intensity increased!');
+      setTimeout(() => setAlert(null), 5000);
+    }
+  }, []);
+
+  const handleReport = useCallback((newReport: Omit<Report, 'id' | 'timestamp'>) => {
+    const report: Report = {
+      ...newReport,
+      id: Math.random().toString(36).substr(2, 9),
+      timestamp: new Date(),
+    };
+    setReports((prev) => [report, ...prev]);
+    setAlert(`✅ Report sent to ${newReport.type}`);
+    setTimeout(() => setAlert(null), 3000);
+  }, []);
 
   return (
     <div className="app-root">
@@ -136,37 +187,53 @@ function App() {
         clickPoints={clickPoints}
         routeCoords={routeCoords}
         onMapClick={onMapClick}
+        currentPoint={currentPoint}
       />
       <RainEffect
         intensity={intensity}
         active={activeFloodPoints.length > 0}
       />
-      <ControlPanel
-        is3D={is3D}
-        onToggle2D={handleToggle2D}
-        onToggle3D={handleToggle3D}
-        intensity={intensity}
-        onIntensityChange={setIntensity}
-        onSimulate={handleSimulate}
-        computing={computing}
-        computeTime={computeTime}
-        onFetchWeather={handleFetchWeather}
-        weatherFetching={weatherFetching}
-        weatherStatus={weatherStatus}
-        weatherColor={weatherColor}
-        autoRefresh={autoRefresh}
-        onToggleAutoRefresh={handleAutoRefresh}
-        govStats={govStats}
-        currentTimestep={currentTimestep}
-        onTimestepChange={(t) => setCurrentTimestep(t)}
-        onMaxClick={() => setCurrentTimestep(-1)}
-        onClearSimulation={handleClearSimulation}
-        timelineDisabled={floodTimeline.length === 0}
-        routeStatus={routeStatus}
-        routeColor={routeColor}
-        showClearRoute={clickPoints.length > 0}
-        onClearRoute={clearRoute}
+      {activeTab === 'gov' && (
+        <ControlPanel
+          is3D={is3D}
+          onToggle2D={handleToggle2D}
+          onToggle3D={handleToggle3D}
+          intensity={intensity}
+          onIntensityChange={setIntensity}
+          onSimulate={handleSimulate}
+          computing={computing}
+          computeTime={computeTime}
+          onFetchWeather={handleFetchWeather}
+          weatherFetching={weatherFetching}
+          weatherStatus={weatherStatus}
+          weatherColor={weatherColor}
+          autoRefresh={autoRefresh}
+          onToggleAutoRefresh={handleAutoRefresh}
+          govStats={govStats}
+          currentTimestep={currentTimestep}
+          onTimestepChange={(t) => setCurrentTimestep(t)}
+          onMaxClick={() => setCurrentTimestep(-1)}
+          onClearSimulation={handleClearSimulation}
+          timelineDisabled={floodTimeline.length === 0}
+          routeStatus={routeStatus}
+          routeColor={routeColor}
+          showClearRoute={clickPoints.length > 0}
+          onClearRoute={clearRoute}
+        />
+      )}
+
+      <TopRightNav activeTab={activeTab} onTabChange={handleTabChange} />
+
+      <BottomRightPanel
+        activeTab={activeTab}
+        reports={reports}
+        onReport={handleReport}
+        isSettingLocation={isSettingLocation}
+        onToggleSetLocation={() => setIsSettingLocation(!isSettingLocation)}
+        currentPoint={currentPoint}
       />
+
+      {alert && <div className="alert-overlay">{alert}</div>}
     </div>
   );
 }
