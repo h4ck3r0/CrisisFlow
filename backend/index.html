@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crisis-Flow Digital Twin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.3.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/deck.gl@8.9.32/dist.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="glass-panel" id="controls">
+        <h1>CRISIS-FLOW <span class="badge">LIVE</span></h1>
+        <p class="subtitle">STGCN Flood Surrogate — Digital Twin</p>
+
+        <div class="view-toggle">
+            <button id="btn-2d" class="toggle-btn active">2D View</button>
+            <button id="btn-3d" class="toggle-btn">3D View</button>
+        </div>
+
+        <div class="control-group">
+            <label for="rain-intensity">Storm Intensity: <span id="intensity-val">0.50</span></label>
+            <input type="range" id="rain-intensity" min="0" max="1" step="0.05" value="0.5">
+        </div>
+
+        <button id="simulate-btn" class="glow-btn">Simulate Storm</button>
+
+        <div class="weather-row">
+            <button id="weather-btn" class="weather-btn">🌧 Live Weather</button>
+            <button id="auto-refresh-btn" class="auto-btn">⟳ Auto</button>
+        </div>
+        <div id="weather-status" class="weather-status"></div>
+
+        <div class="stats-panel">
+            <div class="stat">
+                <span class="stat-label">Accuracy</span>
+                <span class="stat-value">99.2%</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Compute</span>
+                <span class="stat-value" id="compute-time">-- ms</span>
+            </div>
+        </div>
+
+        <div class="gov-section">
+            <h3>Government Dashboard</h3>
+            <div class="gov-grid">
+                <div class="gov-stat">
+                    <span class="gov-label">Affected Nodes</span>
+                    <span class="gov-value" id="gov-affected">--</span>
+                </div>
+                <div class="gov-stat">
+                    <span class="gov-label">Critical Zones</span>
+                    <span class="gov-value danger" id="gov-critical">--</span>
+                </div>
+                <div class="gov-stat">
+                    <span class="gov-label">Max Depth</span>
+                    <span class="gov-value" id="gov-max-depth">--</span>
+                </div>
+                <div class="gov-stat">
+                    <span class="gov-label">High Risk</span>
+                    <span class="gov-value warning" id="gov-dangerous">--</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline-section">
+            <label>Timeline: <span id="timeline-val">Peak (Max)</span></label>
+            <div class="timeline-row">
+                <input type="range" id="timeline-slider" min="0" max="11" step="1" value="0" disabled>
+                <button id="timeline-max-btn" class="max-btn active">MAX</button>
+            </div>
+            <div class="timeline-ticks">
+                <span>0m</span><span>40m</span><span>80m</span><span>120m</span>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><span class="legend-color" style="background:#3cb44a"></span> Safe</div>
+            <div class="legend-item"><span class="legend-color" style="background:#ffd200"></span> Caution</div>
+            <div class="legend-item"><span class="legend-color" style="background:#ff8c00"></span> Dangerous</div>
+            <div class="legend-item"><span class="legend-color" style="background:#ff1e3c"></span> Impassable</div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#ff4444"></span> Hospital</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#ff8800"></span> Fire Stn</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#4488ff"></span> Police</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#44cc88"></span> Shelter</div>
+        </div>
+
+        <div class="routing-section">
+            <h3>AI Dynamic Routing</h3>
+            <p>Click two points on the map to find a safe route.</p>
+            <div id="route-status">Waiting for input...</div>
+            <button id="clear-route-btn" class="outline-btn" style="display:none;">Clear Route</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
