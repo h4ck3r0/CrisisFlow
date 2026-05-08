@@ -32,6 +32,11 @@ export function useFloodSimulation() {
       setComputing(false);
     }
   }, []);
+  const clearSimulation = useCallback(() => {
+    setFloodPoints([]);
+    setFloodTimeline([]);
+    setComputeTime(null);
+  }, []);
 
-  return { floodPoints, floodTimeline, computing, computeTime, simulate };
+  return { floodPoints, floodTimeline, computing, computeTime, simulate, clearSimulation };
 }

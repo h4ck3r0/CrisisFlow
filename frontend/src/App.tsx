@@ -18,7 +18,7 @@ function App() {
   const [intensity, setIntensity] = useState(0.5);
   const [currentTimestep, setCurrentTimestep] = useState(-1);
 
-  const { floodPoints, floodTimeline, computing, computeTime, simulate } =
+  const { floodPoints, floodTimeline, computing, computeTime, simulate, clearSimulation } =
     useFloodSimulation();
   const {
     weatherStatus,
@@ -32,6 +32,7 @@ function App() {
     useRouting();
 
   const activeFloodPoints = useMemo((): FloodPoint[] => {
+    if (currentTimestep === -2) return [];
     if (currentTimestep === -1 || floodTimeline.length === 0) return floodPoints;
     return floodPoints.map((p, i) => ({
       lon: p.lon,
@@ -81,18 +82,30 @@ function App() {
   }, []);
 
   const handleSimulate = useCallback(async () => {
+    if (currentTimestep === -2) {
+      setCurrentTimestep(-1);
+    }
     const result = await simulate(intensity);
     if (result && clickPoints.length === 2) {
       recalculateRoute(intensity);
     }
-  }, [intensity, simulate, clickPoints, recalculateRoute]);
+  }, [intensity, simulate, clickPoints, recalculateRoute, currentTimestep]);
+
+  const handleClearSimulation = useCallback(() => {
+    clearSimulation();
+    setCurrentTimestep(-2);
+  }, [clearSimulation]);
 
   const handleFetchWeather = useCallback(async () => {
     const newIntensity = await fetchWeather();
     if (newIntensity !== null) {
       setIntensity(newIntensity);
+      if (newIntensity <= 0.05) {
+        clearSimulation();
+        setCurrentTimestep(-2);
+      }
     }
-  }, [fetchWeather]);
+  }, [fetchWeather, clearSimulation]);
 
   const handleAutoRefresh = useCallback(() => {
     toggleAutoRefresh(async () => {
@@ -142,6 +155,7 @@ function App() {
         currentTimestep={currentTimestep}
         onTimestepChange={(t) => setCurrentTimestep(t)}
         onMaxClick={() => setCurrentTimestep(-1)}
+        onClearSimulation={handleClearSimulation}
         timelineDisabled={floodTimeline.length === 0}
         routeStatus={routeStatus}
         routeColor={routeColor}

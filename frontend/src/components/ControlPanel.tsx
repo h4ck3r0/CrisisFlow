@@ -23,6 +23,7 @@ interface ControlPanelProps {
   currentTimestep: number;
   onTimestepChange: (t: number) => void;
   onMaxClick: () => void;
+  onClearSimulation: () => void;
   timelineDisabled: boolean;
   routeStatus: string;
   routeColor: string;
@@ -49,6 +50,7 @@ export default function ControlPanel({
   currentTimestep,
   onTimestepChange,
   onMaxClick,
+  onClearSimulation,
   timelineDisabled,
   routeStatus,
   routeColor,
@@ -136,6 +138,7 @@ export default function ControlPanel({
         currentTimestep={currentTimestep}
         onTimestepChange={onTimestepChange}
         onMaxClick={onMaxClick}
+        onClearClick={onClearSimulation}
         disabled={timelineDisabled}
       />
 

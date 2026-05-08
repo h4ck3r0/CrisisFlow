@@ -21,19 +21,18 @@ interface MapViewProps {
 
 const ambientLight = new AmbientLight({
   color: [255, 255, 255],
-  intensity: 1.0,
+  intensity: 2.0,
 });
 
 const sunLight = new DirectionalLight({
   color: [255, 245, 230],
-  intensity: 2.2,
+  intensity: 3.0,
   direction: [-3, -9, -1],
-  _shadow: true,
 });
 
 const sunLight2 = new DirectionalLight({
-  color: [200, 220, 255],
-  intensity: 0.6,
+  color: [180, 200, 255],
+  intensity: 1.5,
   direction: [5, -8, -2],
 });
 
@@ -61,26 +60,23 @@ export default function MapView({
         filled: true,
         extruded: is3D,
         wireframe: is3D,
-        getElevation: (d: any) => (d.properties?.height || 10) * (is3D ? 1.2 : 0),
+        getElevation: (d: any) => (d.properties?.height || 10),
         getFillColor: is3D
-          ? [22, 28, 48, 220]
+          ? [45, 55, 95, 240]
           : [20, 25, 40, 80],
         getLineColor: is3D
-          ? [50, 65, 110, 120]
+          ? [100, 130, 200, 180]
           : [60, 70, 100, 80],
-        elevationScale: is3D ? 1 : 0,
+        elevationScale: is3D ? 5 : 0,
         material: is3D
           ? {
-              ambient: 0.25,
-              diffuse: 0.7,
-              shininess: 40,
-              specularColor: [80, 120, 200],
+              ambient: 0.4,
+              diffuse: 0.8,
+              shininess: 60,
+              specularColor: [120, 160, 255],
             }
           : undefined,
         pickable: false,
-        parameters: {
-          depthTest: true,
-        },
       }),
 
       new GeoJsonLayer({

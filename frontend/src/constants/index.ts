@@ -17,8 +17,9 @@ export const VIEW_STATE_2D: Partial<ViewState> = {
 };
 
 export const VIEW_STATE_3D: Partial<ViewState> = {
-  pitch: 50,
+  pitch: 60,
   bearing: -25,
+  zoom: 15,
   transitionDuration: 800,
 };
 

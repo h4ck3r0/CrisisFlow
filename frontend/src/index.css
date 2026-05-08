@@ -374,6 +374,13 @@ input[type=range] {
   box-shadow: 0 0 10px var(--primary-glow);
 }
 
+.clear-btn.active {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+  box-shadow: 0 0 10px rgba(255, 51, 102, 0.4);
+}
+
 .timeline-ticks {
   display: flex;
   justify-content: space-between;

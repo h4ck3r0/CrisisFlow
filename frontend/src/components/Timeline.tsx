@@ -2,6 +2,7 @@ interface TimelineProps {
   currentTimestep: number;
   onTimestepChange: (t: number) => void;
   onMaxClick: () => void;
+  onClearClick: () => void;
   disabled: boolean;
 }
 
@@ -9,10 +10,15 @@ export default function Timeline({
   currentTimestep,
   onTimestepChange,
   onMaxClick,
+  onClearClick,
   disabled,
 }: TimelineProps) {
   const label =
-    currentTimestep === -1 ? 'Peak (Max)' : `${currentTimestep * 10} min`;
+    currentTimestep === -1
+      ? 'Peak (Max)'
+      : currentTimestep === -2
+        ? 'Off'
+        : `${currentTimestep * 10} min`;
 
   return (
     <div className="timeline-section">
@@ -25,8 +31,8 @@ export default function Timeline({
           min={0}
           max={11}
           step={1}
-          value={currentTimestep === -1 ? 0 : currentTimestep}
-          disabled={disabled}
+          value={currentTimestep < 0 ? 0 : currentTimestep}
+          disabled={disabled || currentTimestep === -2}
           onChange={(e) => onTimestepChange(parseInt(e.target.value))}
         />
         <button
@@ -34,6 +40,12 @@ export default function Timeline({
           onClick={onMaxClick}
         >
           MAX
+        </button>
+        <button
+          className={`max-btn clear-btn ${currentTimestep === -2 ? 'active' : ''}`}
+          onClick={onClearClick}
+        >
+          CLR
         </button>
       </div>
       <div className="timeline-ticks">
