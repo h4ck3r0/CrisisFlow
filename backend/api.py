@@ -3,7 +3,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import torch
 import networkx as nx
 import osmnx as ox
@@ -54,6 +54,14 @@ class RouteRequest(BaseModel):
     end_lat: float
     end_lon: float
     intensity: float
+
+@app.get("/geojson/buildings")
+def get_buildings():
+    return FileResponse("kc_valley_buildings.geojson", media_type="application/json")
+
+@app.get("/geojson/water")
+def get_water():
+    return FileResponse("kc_valley_water.geojson", media_type="application/json")
 
 @app.post("/simulate")
 def simulate_storm(req: StormRequest):
