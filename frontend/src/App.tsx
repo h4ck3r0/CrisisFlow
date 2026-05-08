@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import MapView from './components/MapView';
 import ControlPanel from './components/ControlPanel';
+import RainEffect from './components/RainEffect';
 import { useFloodSimulation } from './hooks/useFloodSimulation';
 import { useWeather } from './hooks/useWeather';
 import { useRouting } from './hooks/useRouting';
@@ -135,6 +136,10 @@ function App() {
         clickPoints={clickPoints}
         routeCoords={routeCoords}
         onMapClick={onMapClick}
+      />
+      <RainEffect
+        intensity={intensity}
+        active={activeFloodPoints.length > 0}
       />
       <ControlPanel
         is3D={is3D}
