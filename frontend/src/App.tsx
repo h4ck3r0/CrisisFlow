@@ -95,7 +95,7 @@ function App() {
           nearDepth = p.depth;
         }
       }
-      return { ...f, accessible: nearDepth < 5 };
+      return { ...f, accessible: nearDepth < 0.2 };
     });
   }, [activeFloodPoints]);
 
@@ -105,10 +105,10 @@ function App() {
       return { affected: 0, total: 0, critical: 0, maxDepth: 0, dangerous: 0 };
     return {
       total: points.length,
-      affected: points.filter((p) => p.depth > 0.5).length,
-      critical: points.filter((p) => p.depth > 10).length,
+      affected: points.filter((p) => p.depth > 0.05).length,
+      critical: points.filter((p) => p.depth > 1.0).length,
       maxDepth: Math.max(...points.map((p) => p.depth)),
-      dangerous: points.filter((p) => p.depth > 5).length,
+      dangerous: points.filter((p) => p.depth > 0.3).length,
     };
   }, [activeFloodPoints]);
 
@@ -239,6 +239,8 @@ function App() {
         onRoleChange={handleRoleChange} 
         intensity={intensity}
         simulationActive={intensity > 0.05}
+        onClearRoute={clearRoute}
+        routeActive={clickPoints.length > 0}
       />
 
       <div className="cf-main">

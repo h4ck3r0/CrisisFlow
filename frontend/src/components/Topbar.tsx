@@ -6,9 +6,14 @@ interface TopbarProps {
   onRoleChange: (role: RoleId) => void;
   intensity?: number;
   simulationActive?: boolean;
+  onClearRoute?: () => void;
+  routeActive?: boolean;
 }
 
-export default function Topbar({ currentRole, onRoleChange, intensity = 0, simulationActive = false }: TopbarProps) {
+export default function Topbar({ 
+  currentRole, onRoleChange, intensity = 0, simulationActive = false, 
+  onClearRoute, routeActive = false 
+}: TopbarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [clock, setClock] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -110,6 +115,23 @@ export default function Topbar({ currentRole, onRoleChange, intensity = 0, simul
           <span className="cf-pulse-dot cf-pd-red" />
           FLOOD ALERT
         </div>
+      )}
+      {routeActive && (
+        <button 
+          className="cf-pill cf-pill-alert" 
+          style={{ 
+            cursor: 'pointer', 
+            background: 'rgba(239, 68, 68, 0.1)', 
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: '#ef4444',
+            fontWeight: 600,
+            fontSize: '11px',
+            marginLeft: '12px'
+          }}
+          onClick={onClearRoute}
+        >
+          ❌ CLEAR ROUTE
+        </button>
       )}
 
       {/* Right side */}

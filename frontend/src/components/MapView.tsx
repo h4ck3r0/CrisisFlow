@@ -133,8 +133,8 @@ export default function MapView({
         getPosition: (d: FloodPoint) => [d.lon, d.lat],
         getRadius: (d: FloodPoint) => d.depth * 2,
         getFillColor: (d: FloodPoint) => {
-          if (d.depth > 10) return [255, 40, 60, 180];
-          if (d.depth > 5) return [255, 150, 0, 150];
+          if (d.depth > 1.0) return [255, 40, 60, 180];
+          if (d.depth > 0.3) return [255, 150, 0, 150];
           return [0, 200, 255, 120];
         },
       }),
@@ -273,19 +273,19 @@ export default function MapView({
       const depth = object.depth as number;
       let status = 'Safe';
       let color = '#4ade80';
-      if (depth > 10) {
+      if (depth > 1.0) {
         status = 'CRITICAL';
         color = '#ff2244';
-      } else if (depth > 5) {
+      } else if (depth > 0.3) {
         status = 'HIGH RISK';
         color = '#ff8800';
-      } else if (depth > 2) {
+      } else if (depth > 0.05) {
         status = 'MODERATE';
         color = '#ffcc00';
       }
       return {
         html: `<div style="font-family:Inter,sans-serif">
-          <strong style="color:${color};font-size:18px;font-family:Outfit,sans-serif">${depth.toFixed(1)} cm</strong><br/>
+          <strong style="color:${color};font-size:18px;font-family:Outfit,sans-serif">${depth.toFixed(2)} cm</strong><br/>
           <span style="color:#8b9bb4;font-size:11px;text-transform:uppercase">Water Depth</span><br/>
           <span style="color:${color};font-weight:600;font-size:12px">${status}</span>
         </div>`,

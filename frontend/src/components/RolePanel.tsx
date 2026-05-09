@@ -18,6 +18,7 @@ interface RolePanelProps {
   onToggleBarricade?: () => void;
   onDeleteBarricade?: (id: string) => void;
 }
+
 export default function RolePanel({
   role, data, onRefresh,
   currentPoint, onFindNearest, routeInfo, routeStatus, routeColor, hasStartPoint,

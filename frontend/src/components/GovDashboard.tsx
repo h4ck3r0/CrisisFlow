@@ -31,7 +31,7 @@ export default function GovDashboard({ stats }: GovDashboardProps) {
         <div className="gov-stat">
           <span className="gov-label">Max Depth</span>
           <span className="gov-value">
-            {stats.total > 0 ? `${stats.maxDepth.toFixed(1)} cm` : '--'}
+            {stats.total > 0 ? `${stats.maxDepth.toFixed(2)} cm` : '--'}
           </span>
         </div>
         <div className="gov-stat">

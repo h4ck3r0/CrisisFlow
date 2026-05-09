@@ -19,6 +19,7 @@ interface RolePanelContentProps {
   barricadeMode?: boolean;
   onToggleBarricade?: () => void;
   onDeleteBarricade?: (id: string) => void;
+  onClearRoute?: () => void;
 }
 
 /* ── Shared helpers ─────────────────────────────────────── */
@@ -43,7 +44,7 @@ function ZoneRows({ zones, onZoneClick }: { zones: any[]; onZoneClick?: (lat: nu
             <div className="cf-zr-bar-wrap">
               <div className="cf-zr-bar" style={{ width: `${pct}%`, background: col }} />
             </div>
-            <span className="cf-zr-depth" style={{ color: col }}>{z.depth_meters}m</span>
+            <span className="cf-zr-depth" style={{ color: col }}>{(z.depth_meters || 0).toFixed(2)}cm</span>
           </div>
         );
       })}
@@ -205,7 +206,7 @@ function EmergencyFinder({
             </div>
             <div>
               <div className="cf-res-sub">Max Depth</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: routeInfo.maxDepth > 5 ? '#f87171' : '#4ade80' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: routeInfo.maxDepth > 30 ? '#f87171' : '#4ade80' }}>
                 {routeInfo.maxDepth} cm
               </div>
             </div>
@@ -253,7 +254,7 @@ function GovOverview({ data, onZoneClick }: { data: any, onZoneClick?: (lat: num
       <div className="cf-report-card" style={{ marginBottom: 14, padding: '10px 12px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span className="cf-res-sub">Average Flood Depth</span>
-          <span style={{ fontWeight: 600, color: 'var(--cf-txt)' }}>{summary.average_depth || 0}m</span>
+          <span style={{ fontWeight: 600, color: 'var(--cf-txt)' }}>{(summary.average_depth || 0).toFixed(2)}cm</span>
         </div>
       </div>
 
@@ -342,7 +343,7 @@ function CitizenReportsView({ data, onRefresh, role, onAssign }: { data: any; on
                 </>
               )}
               {r.gemini_depth_estimate != null && (
-                <span className="cf-rc-depth-chip">~{r.gemini_depth_estimate}m</span>
+                <span className="cf-rc-depth-chip">~{(r.gemini_depth_estimate || 0).toFixed(2)}cm</span>
               )}
             </div>
           </div>
@@ -383,10 +384,15 @@ function GovTriage({ data, onRefresh }: { data: any, onRefresh: () => void }) {
     try {
       const res = await fetch(`${API_URL}/api/triage/auto-command`, { method: 'POST' });
       const d = await res.json();
+      
+      // Also run triage
+      const res2 = await fetch(`${API_URL}/api/triage/run`, { method: 'POST' });
+      const d2 = await res2.json();
+
       if (d.errors && d.errors.length > 0) {
         setStatus(`⚠ AI Issues: ${d.errors[0]}`);
       } else {
-        setStatus(`✓ AI COMPLETE · Reports Processed: ${d.reports_processed}`);
+        setStatus(`✓ AI COMPLETE · Reports: ${d.reports_processed} · Triage: ${d2.dispatch_count} dispatches`);
       }
       onRefresh();
     } catch { setStatus('❌ AI Communication Failed'); }
@@ -407,7 +413,7 @@ function GovTriage({ data, onRefresh }: { data: any, onRefresh: () => void }) {
         onClick={runAiCommander} 
         disabled={aiRunning || running}
       >
-        <span>🤖</span>
+        <span>🧠</span>
         <div>
           <div>{aiRunning ? 'AI AGENT ACTIVE...' : 'ACTIVATE AI COMMANDER'}</div>
           <div className="cf-ab-sub" style={{ color: '#a5b4fc' }}>Auto-categorize reports & dispatch</div>
@@ -416,7 +422,7 @@ function GovTriage({ data, onRefresh }: { data: any, onRefresh: () => void }) {
 
       <div className="cf-slabel">TRIAGE COMMANDER (FLOOD)</div>
       <button className="cf-action-btn cf-action-primary" onClick={runTriage} disabled={running || aiRunning}>
-        <span>🚁</span>
+        <span>🌊</span>
         <div>
           <div>{running ? 'Running...' : 'Run Flood Triage'}</div>
           <div className="cf-ab-sub">AI dispatches to critical zones</div>
@@ -478,7 +484,7 @@ function PoliceRoadBlocks({ data, barricadeMode, onToggleBarricade, onDeleteBarr
           <div className="cf-res-icon" style={{ background: '#0d2a1a', color: '#22c55e' }}>🚧</div>
           <div style={{ flex: 1 }}>
             <div className="cf-res-name">{b.road_name}</div>
-            <div className="cf-res-sub">{b.reason} · {b.depth_at_block}m</div>
+            <div className="cf-res-sub">{b.reason} · {(b.depth_at_block || 0).toFixed(2)}cm</div>
           </div>
           <button 
             className="cf-mini-btn" 
@@ -594,13 +600,13 @@ function CitizenMyArea({ data }: { data: any }) {
       {isCritical && (
         <div className="cf-flood-warning">
           <div className="cf-fw-title">⚠️ Flood warning</div>
-          <div className="cf-fw-body">{z.ward_name || ''}: <strong>{z.depth_meters || 0}m</strong> depth predicted.</div>
+          <div className="cf-fw-body">{z.ward_name || ''}: <strong>{(z.depth_meters || 0).toFixed(2)}cm</strong> depth predicted.</div>
         </div>
       )}
       <div className="cf-slabel">STATUS</div>
       {[
         { l: 'Zone', v: z.ward_name || '--', c: riskColor(z.risk_level) },
-        { l: 'Depth', v: (z.depth_meters || 0) + 'm', c: riskColor(z.risk_level) },
+        { l: 'Depth', v: (z.depth_meters || 0).toFixed(2) + 'cm', c: riskColor(z.risk_level) },
         { l: 'Access', v: ((z.road_accessibility || 0) * 100).toFixed(0) + '%', c: '#a78bfa' },
       ].map((row) => (
         <div className="cf-status-row" key={row.l}>
@@ -711,117 +717,113 @@ export default function RolePanelContent({
 }: RolePanelContentProps) {
   if (!data) return <div className="cf-empty">Loading...</div>;
 
-  const zones = data.zones || [];
-  const resources = data.resources || [];
-  const incidents = data.active_incidents || data.fire_incidents || data.incoming_medical_incidents || [];
-  const dispatches = data.active_dispatches || [];
-  const alerts = data.recent_alerts || data.alerts || [];
+  const content = (() => {
+    const zones = data.zones || [];
+    const resources = data.resources || [];
+    const incidents = data.active_incidents || data.fire_incidents || data.incoming_medical_incidents || [];
+    const dispatches = data.active_dispatches || [];
+    const alerts = data.recent_alerts || data.alerts || [];
 
-  const handleDispatchUpdate = async (orderId: string, status: string) => {
-    try {
-      const res = await fetch(`${API_URL}/api/dispatches/${orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (res.ok) onRefresh();
-    } catch (e) {
-      console.error('Failed to update dispatch:', e);
-    }
-  };
-
-  const handleIncidentUpdate = async (incId: string, status: string) => {
-    try {
-      const res = await fetch(`${API_URL}/api/incidents/${incId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (res.ok) onRefresh();
-    } catch (e) {
-      console.error('Failed to update incident:', e);
-    }
-  };
-
-  const handleAssign = async (r: any, to: string) => {
-    try {
-      const rid = r.report_id;
-      // 1. Update report
-      const res = await fetch(`${API_URL}/api/citizen-reports/${rid}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ report_to: to }),
-      });
-
-      if (!res.ok) {
-        console.error('Failed to update report status:', await res.text());
-        return;
-      }
-
-      if (to === 'police') {
-        // Create Incident for Police
-        await fetch(`${API_URL}/api/incidents`, {
-          method: 'POST',
+    const handleDispatchUpdate = async (orderId: string, status: string) => {
+      try {
+        const res = await fetch(`${API_URL}/api/dispatches/${orderId}`, {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            incident_id: `INC-ASSIGN-${Math.random().toString(36).substring(7).toUpperCase()}`,
-            incident_type: 'evacuation_support',
-            zone_id: r.zone_id || 'unknown',
-            location_name: r.ward_name || 'Assigned Location',
-            severity: 'high',
-            notes: `Assigned from Gov: ${r.description}`
-          }),
+          body: JSON.stringify({ status }),
         });
-      } else if (to === 'hospital') {
-        // Create Dispatch for Hospital
+        if (res.ok) onRefresh();
+      } catch (e) {
+        console.error('Failed to update dispatch:', e);
+      }
+    };
+
+    const handleIncidentUpdate = async (incId: string, status: string) => {
+      try {
+        const res = await fetch(`${API_URL}/api/incidents/${incId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        });
+        if (res.ok) onRefresh();
+      } catch (e) {
+        console.error('Failed to update incident:', e);
+      }
+    };
+
+    const handleAssign = async (r: any, to: string) => {
+      try {
+        const rid = r.report_id;
+        const res = await fetch(`${API_URL}/api/citizen-reports/${rid}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ report_to: to }),
+        });
+
+        if (!res.ok) return;
+
+        if (to === 'police') {
+          await fetch(`${API_URL}/api/incidents`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              incident_id: `INC-ASSIGN-${Math.random().toString(36).substring(7).toUpperCase()}`,
+              incident_type: 'evacuation_support',
+              zone_id: r.zone_id || 'unknown',
+              location_name: r.ward_name || 'Assigned Location',
+              severity: 'high',
+              notes: `Assigned from Gov: ${r.description}`
+            }),
+          });
+        } else if (to === 'hospital') {
+          await fetch(`${API_URL}/api/dispatches`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              order_id: `DO-ASSIGN-${Math.random().toString(36).substring(7).toUpperCase()}`,
+              resource_id: 'auto',
+              resource_type: 'ambulance',
+              target_zone_id: r.zone_id || 'unknown',
+              target_ward: r.ward_name || 'Assigned Location',
+              reason: `Gov assigned medical evac: ${r.description}`,
+              dispatched_by: 'government',
+              status: 'pending'
+            }),
+          });
+        }
+        onRefresh();
+      } catch (e) {
+        console.error('Failed to assign report:', e);
+      }
+    };
+
+    const handleIncidentDeploy = async (inc: any) => {
+      try {
         await fetch(`${API_URL}/api/dispatches`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            order_id: `DO-ASSIGN-${Math.random().toString(36).substring(7).toUpperCase()}`,
+            order_id: `DO-POL-${Math.random().toString(36).substring(7).toUpperCase()}`,
             resource_id: 'auto',
-            resource_type: 'ambulance',
-            target_zone_id: r.zone_id || 'unknown',
-            target_ward: r.ward_name || 'Assigned Location',
-            reason: `Gov assigned medical evac: ${r.description}`,
-            dispatched_by: 'government',
-            status: 'pending'
+            resource_type: 'police_unit',
+            target_zone_id: inc.zone_id || 'unknown',
+            target_ward: inc.location_name || 'Unknown Ward',
+            reason: `Responding to incident: ${inc.incident_id}`,
+            dispatched_by: 'police',
+            status: 'deployed'
           }),
         });
+        await fetch(`${API_URL}/api/incidents/${inc.incident_id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'active' }),
+        });
+        onRefresh();
+      } catch (e) {
+        console.error('Failed to deploy from incident:', e);
       }
-      onRefresh();
-    } catch (e) {
-      console.error('Failed to assign report:', e);
-    }
-  };
+    };
 
-  const handleIncidentDeploy = async (inc: any) => {
-    try {
-      await fetch(`${API_URL}/api/dispatches`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          order_id: `DO-POL-${Math.random().toString(36).substring(7).toUpperCase()}`,
-          resource_id: 'auto',
-          resource_type: 'police_unit',
-          target_zone_id: inc.zone_id || 'unknown',
-          target_ward: inc.location_name || 'Unknown Ward',
-          reason: `Responding to incident: ${inc.incident_id}`,
-          dispatched_by: 'police',
-          status: 'deployed'
-        }),
-      });
-      // Mark incident as active
-      await fetch(`${API_URL}/api/incidents/${inc.incident_id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'active' }),
-      });
-      onRefresh();
-    } catch (e) {
-      console.error('Failed to deploy from incident:', e);
-    }
-  };
+
 
   // Government
   if (role === 'gov') {
@@ -871,21 +873,24 @@ export default function RolePanelContent({
     if (tab === 'Dispatches') return <><div className="cf-slabel">DISPATCHES</div><DispatchList dispatches={dispatches} emptyLabel="None" onUpdateStatus={handleDispatchUpdate} /></>;
   }
 
-  // Citizen
-  if (role === 'citizen') {
-    if (tab === 'My Area') return <CitizenMyArea data={data} />;
-    if (tab === 'Alerts') return <><div className="cf-slabel">ALERTS</div><AlertList alerts={alerts} /></>;
-    if (tab === 'Report') return <CitizenReportForm onRefresh={onRefresh} currentPoint={currentPoint} />;
-    if (tab === 'Find Help') return (
-      <EmergencyFinder
-        onFindNearest={onFindNearest}
-        routeInfo={routeInfo}
-        routeStatus={routeStatus}
-        routeColor={routeColor}
-        hasStartPoint={hasStartPoint}
-      />
-    );
-  }
+    // Citizen
+    if (role === 'citizen') {
+      if (tab === 'My Area') return <CitizenMyArea data={data} />;
+      if (tab === 'Alerts') return <><div className="cf-slabel">ALERTS</div><AlertList alerts={alerts} /></>;
+      if (tab === 'Report') return <CitizenReportForm onRefresh={onRefresh} currentPoint={currentPoint} />;
+      if (tab === 'Find Help') return (
+        <EmergencyFinder
+          onFindNearest={onFindNearest}
+          routeInfo={routeInfo}
+          routeStatus={routeStatus}
+          routeColor={routeColor}
+          hasStartPoint={hasStartPoint}
+        />
+      );
+    }
 
-  return null;
+    return null;
+  })();
+
+  return content;
 }

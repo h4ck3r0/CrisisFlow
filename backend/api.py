@@ -255,18 +255,18 @@ async def get_depth_lookup(intensity: float):
     return lookup
 
 def compute_flood_weight(length: float, depth_u: float, depth_v: float) -> float:
-    avg_depth = (depth_u + depth_v) / 2.0
-    if avg_depth > 12.0:
+    avg_depth_raw = (depth_u + depth_v) / 2.0
+    if avg_depth_raw > 0.3: # Impassable for almost all vehicles
         return length + 999999.0
-    penalty = length * (math.exp(avg_depth / 3.0) - 1.0)
+    penalty = length * (math.exp(avg_depth_raw / 0.05) - 1.0)
     return length + penalty
 
 def get_segment_color(avg_depth: float):
-    if avg_depth > 15:
+    if avg_depth > 0.15:
         return [255, 30, 50, 255]
-    elif avg_depth > 8:
+    elif avg_depth > 0.08:
         return [255, 140, 0, 255]
-    elif avg_depth > 4:
+    elif avg_depth > 0.04:
         return [255, 220, 0, 240]
     else:
         return [74, 222, 128, 255]
@@ -307,11 +307,11 @@ def build_route_response(path, depth_lookup, G_routing):
             "color": get_segment_color(avg_depth)
         })
 
-    if max_depth_on_route > 15:
+    if max_depth_on_route > 0.15:
         risk = "CRITICAL"
-    elif max_depth_on_route > 8:
+    elif max_depth_on_route > 0.08:
         risk = "HIGH"
-    elif max_depth_on_route > 4:
+    elif max_depth_on_route > 0.04:
         risk = "MODERATE"
     else:
         risk = "SAFE"
@@ -326,17 +326,17 @@ def build_route_response(path, depth_lookup, G_routing):
     dist_km = round(total_distance / 1000.0, 2)
 
     def compute_eta(base_speed_kmh, max_passable_depth):
-        if max_depth_on_route > max_passable_depth:
+        if max_depth_on_route > (max_passable_depth / 100.0):
             return None
-        flood_factor = max(1.0, 1.0 + (max_depth_on_route / max_passable_depth) * 2.0)
+        flood_factor = max(1.0, 1.0 + (max_depth_on_route / (max_passable_depth / 100.0)) * 2.0)
         effective_speed = base_speed_kmh / flood_factor
         time_min = (dist_km / effective_speed) * 60
         return round(time_min)
 
     eta = {
-        "walk": compute_eta(5.0, 30.0),
-        "bike": compute_eta(15.0, 8.0),
-        "car": compute_eta(30.0, 20.0),
+        "walk": compute_eta(5.0, 30.0), # 30cm limit
+        "bike": compute_eta(15.0, 8.0),  # 8cm limit
+        "car": compute_eta(30.0, 20.0), # 20cm limit
     }
 
     return {
@@ -344,7 +344,7 @@ def build_route_response(path, depth_lookup, G_routing):
         "path": full_path,
         "segments": segments,
         "distance_km": dist_km,
-        "max_depth": round(max_depth_on_route, 1),
+        "max_depth": round(max_depth_on_route, 2),
         "risk_level": risk,
         "eta": eta,
     }
