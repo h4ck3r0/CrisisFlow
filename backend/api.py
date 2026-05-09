@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 from fastapi import FastAPI
@@ -108,7 +110,7 @@ def simulate_storm(req: StormRequest):
 @app.get("/weather")
 def get_weather():
     try:
-        url = "https://api.open-meteo.com/v1/forecast?latitude=12.935&longitude=77.645&current=rain,precipitation&timezone=Asia/Kolkata"
+        url = os.getenv("WEATHER_API_URL", "https://api.open-meteo.com/v1/forecast?latitude=12.935&longitude=77.645&current=rain,precipitation&timezone=Asia/Kolkata")
         with urllib.request.urlopen(url, timeout=5) as response:
             weather_data = json.loads(response.read().decode())
         rain = weather_data.get("current", {}).get("rain", 0)
@@ -333,5 +335,7 @@ def get_nearest_route(req: NearestRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    host = os.getenv("API_HOST", "0.0.0.0")
+    port = int(os.getenv("API_PORT", 8000))
+    uvicorn.run(app, host=host, port=port)
 

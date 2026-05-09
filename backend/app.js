@@ -1,6 +1,10 @@
 const { DeckGL, GeoJsonLayer, ScatterplotLayer, PathLayer, HeatmapLayer } = deck;
 
-const API_URL = 'http://127.0.0.1:8000';
+let API_URL = window.location.origin === 'null' ? 'http://127.0.0.1:8000' : window.location.origin;
+// If running locally as a file, fallback to localhost:8000
+if (window.location.protocol === 'file:') {
+    API_URL = 'http://127.0.0.1:8000';
+}
 
 const INITIAL_VIEW_STATE = {
     longitude: 77.6450,
