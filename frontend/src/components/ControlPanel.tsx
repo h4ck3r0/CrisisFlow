@@ -156,10 +156,6 @@ export default function ControlPanel({
 
         <div className="stats-panel">
           <div className="stat">
-            <span className="stat-label">Accuracy</span>
-            <span className="stat-value">99.2%</span>
-          </div>
-          <div className="stat">
             <span className="stat-label">Compute</span>
             <span className="stat-value">
               {computeTime !== null ? `${computeTime} ms` : '-- ms'}

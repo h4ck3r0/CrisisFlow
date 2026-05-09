@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 load_dotenv()
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 import torch
@@ -14,6 +14,8 @@ from pydantic import BaseModel
 import numpy as np
 import json
 import urllib.request
+import uuid
+from datetime import datetime, timezone
 
 app = FastAPI(title="Crisis-Flow Digital Twin API")
 
@@ -26,14 +28,15 @@ app.add_middleware(
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 T = 12
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 print("Loading Graph...")
-G = ox.load_graphml("kc_valley_focused.graphml")
+G = ox.load_graphml(os.path.join(BASE_DIR, "kc_valley_focused.graphml"))
 nodes = list(G.nodes())
 num_nodes = len(nodes)
 
 print("Loading Static Features and Model...")
-startup_data = torch.load("val_dataset.pt", map_location="cpu", weights_only=False)
+startup_data = torch.load(os.path.join(BASE_DIR, "val_dataset.pt"), map_location="cpu", weights_only=False)
 X_sample = startup_data["X"][0]
 edge_index = startup_data["edge_index"].to(DEVICE)
 
@@ -42,10 +45,22 @@ static_runoff = X_sample[:, 0, 4].to(DEVICE)
 static_flow_acc = X_sample[:, 0, 5].to(DEVICE)
 
 model = FloodSurrogateModel(num_nodes=num_nodes, hidden_dim=64).to(DEVICE)
-model.load_state_dict(torch.load("stgcn_weights.pth", map_location=DEVICE))
+model.load_state_dict(torch.load(os.path.join(BASE_DIR, "stgcn_weights.pth"), map_location=DEVICE))
 model.eval()
 
 b_edge = get_batched_edge_index(edge_index, num_nodes, 1, DEVICE)
+node_to_idx = {node: i for i, node in enumerate(nodes)}
+
+ZONES_MAPPING = [
+    {"id": "zone-bellandur", "lat": 12.9250, "lng": 77.6680},
+    {"id": "zone-sarjapur", "lat": 12.9100, "lng": 77.6740},
+    {"id": "zone-hsr", "lat": 12.9180, "lng": 77.6440},
+    {"id": "zone-koramangala", "lat": 12.9350, "lng": 77.6200},
+    {"id": "zone-silkboard", "lat": 12.9170, "lng": 77.6230},
+]
+
+# All STGCN routes on a router so main.py can also include them
+stgcn_router = APIRouter(tags=["STGCN Digital Twin"])
 
 class StormRequest(BaseModel):
     intensity: float
@@ -57,16 +72,16 @@ class RouteRequest(BaseModel):
     end_lon: float
     intensity: float
 
-@app.get("/geojson/buildings")
+@stgcn_router.get("/geojson/buildings")
 def get_buildings():
-    return FileResponse("kc_valley_buildings.geojson", media_type="application/json")
+    return FileResponse(os.path.join(BASE_DIR, "kc_valley_buildings.geojson"), media_type="application/json")
 
-@app.get("/geojson/water")
+@stgcn_router.get("/geojson/water")
 def get_water():
-    return FileResponse("kc_valley_water.geojson", media_type="application/json")
+    return FileResponse(os.path.join(BASE_DIR, "kc_valley_water.geojson"), media_type="application/json")
 
-@app.post("/simulate")
-def simulate_storm(req: StormRequest):
+@stgcn_router.post("/simulate")
+async def simulate_storm(req: StormRequest):
     X_new = torch.zeros((1, num_nodes, T, 6), device=DEVICE)
     envelope = torch.exp(-0.5 * ((torch.arange(T, device=DEVICE) - T/2) / 2.0)**2)
 
@@ -88,6 +103,67 @@ def simulate_storm(req: StormRequest):
     max_depths = all_depths.max(axis=1)
     node_depths = {nodes[i]: float(max_depths[i]) for i in range(num_nodes)}
 
+    # Update MongoDB zones with new simulation depths
+    import database
+    if database.db is not None:
+        for z in ZONES_MAPPING:
+            nearest_node = ox.distance.nearest_nodes(G, z["lng"], z["lat"])
+            idx = node_to_idx.get(nearest_node)
+            if idx is not None:
+                depth = float(max_depths[idx])
+                risk = "moderate"
+                if depth > 1.0: risk = "critical"
+                elif depth > 0.6: risk = "severe"
+                elif depth > 0.3: risk = "high"
+                
+                await database.db.zones.update_one(
+                    {"zone_id": z["id"]},
+                    {"$set": {
+                        "depth_meters": round(depth, 2),
+                        "risk_level": risk,
+                        "prediction_timestamp": datetime.now(timezone.utc)
+                    }}
+                )
+
+                # Update Road Blocks in this zone
+                await database.db.road_blocks.update_many(
+                    {"zone_id": z["id"]},
+                    {"$set": {
+                        "depth_at_block": round(depth, 2),
+                        "reason": f"Automatic closure: {round(depth, 2)}m flooding",
+                        "status": "active" if depth > 0.3 else "cleared"
+                    }}
+                )
+
+                # Dynamically adjust Hospital Capacity based on flood depth
+                # (Simulate facility strain: deeper water = fewer available beds)
+                if depth > 0.1:
+                    strain = min(depth * 0.4, 0.8) # up to 80% capacity loss
+                    await database.db.hospital_capacity.update_many(
+                        {"zone_id": z["id"]},
+                        [{"$set": {
+                            "general_beds_available": { 
+                                "$floor": { "$multiply": ["$general_beds_total", max(0.1, 1.0 - strain)] } 
+                            },
+                            "emergency_beds_available": {
+                                "$floor": { "$multiply": ["$emergency_beds_total", max(0.1, 1.0 - strain)] }
+                            }
+                        }}]
+                    )
+        
+        # Generate a Global Alert for the whole basin if intensity is high
+        if req.intensity > 0.5:
+            await database.db.alerts.insert_one({
+                "alert_id": f"ALRT-{uuid.uuid4().hex[:4].upper()}",
+                "severity": "evacuation" if req.intensity > 0.8 else "warning",
+                "message": f"CRITICAL: {round(req.intensity*100)}% Storm intensity. Automated flood alerts active for KC Valley.",
+                "sent_at": datetime.now(timezone.utc),
+                "deleted_at": None,
+                "channel": "broadcast"
+            })
+
+        print(f"[Simulation] Updated {len(ZONES_MAPPING)} zones, road blocks, and hospital capacities in MongoDB")
+
     roads = []
     for u, v, edata in G.edges(data=True):
         d_u = node_depths.get(u, 0.0)
@@ -107,7 +183,7 @@ def simulate_storm(req: StormRequest):
 
     return {"roads": roads, "points": points, "timeline": timeline}
 
-@app.get("/weather")
+@stgcn_router.get("/weather")
 def get_weather():
     try:
         url = os.getenv("WEATHER_API_URL", "https://api.open-meteo.com/v1/forecast?latitude=12.935&longitude=77.645&current=rain,precipitation&timezone=Asia/Kolkata")
@@ -125,7 +201,7 @@ import math
 
 last_simulation_cache = {"intensity": None, "depth_lookup": {}}
 
-def get_depth_lookup(intensity: float):
+async def get_depth_lookup(intensity: float):
     cached = last_simulation_cache
     if cached["intensity"] == intensity and cached["depth_lookup"]:
         return cached["depth_lookup"]
@@ -135,7 +211,7 @@ def get_depth_lookup(intensity: float):
         last_simulation_cache["depth_lookup"] = {}
         return {}
         
-    result = simulate_storm(StormRequest(intensity=intensity))
+    result = await simulate_storm(StormRequest(intensity=intensity))
     flood_list = result["points"]
     lookup = {nodes[i]: flood_list[i]["depth"] for i in range(len(flood_list))}
     last_simulation_cache["intensity"] = intensity
@@ -237,9 +313,9 @@ def build_route_response(path, depth_lookup, G_routing):
         "eta": eta,
     }
 
-@app.post("/route")
-def get_route(req: RouteRequest):
-    depth_lookup = get_depth_lookup(req.intensity)
+@stgcn_router.post("/route")
+async def get_route(req: RouteRequest):
+    depth_lookup = await get_depth_lookup(req.intensity)
 
     orig = ox.distance.nearest_nodes(G, req.start_lon, req.start_lat)
     dest = ox.distance.nearest_nodes(G, req.end_lon, req.end_lat)
@@ -294,10 +370,10 @@ FACILITY_COORDS = {
     ],
 }
 
-@app.post("/route/nearest")
-def get_nearest_route(req: NearestRequest):
+@stgcn_router.post("/route/nearest")
+async def get_nearest_route(req: NearestRequest):
     facilities = FACILITY_COORDS.get(req.facility_type, FACILITY_COORDS["hospital"])
-    depth_lookup = get_depth_lookup(req.intensity)
+    depth_lookup = await get_depth_lookup(req.intensity)
 
     best_route = None
     best_name = ""
@@ -333,8 +409,16 @@ def get_nearest_route(req: NearestRequest):
         return best_route
     return {"status": "error", "message": f"No accessible {req.facility_type} found."}
 
+# Include router on this app (for standalone `python api.py` usage)
+app.include_router(stgcn_router)
+
 if __name__ == "__main__":
     import uvicorn
+    print("=" * 60)
+    print("WARNING: Running api.py directly only starts STGCN routes.")
+    print("         MongoDB CRUD routes will NOT be available!")
+    print("         Use 'python main.py' for the full unified server.")
+    print("=" * 60)
     host = os.getenv("API_HOST", "0.0.0.0")
     port = int(os.getenv("API_PORT", 8000))
     uvicorn.run(app, host=host, port=port)

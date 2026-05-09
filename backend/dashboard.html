@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CrisisFlow — Multi-Role Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg0:#07090f;--bg1:#0d1117;--bg2:#141b27;--bg3:#1c2535;--bg4:#243042;--border:#1f2d42;--border2:#2a3d57;--txt:#dce6f5;--txt2:#7a91b0;--txt3:#3d5272;--mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;--acc:#3b7bff;--role-color:#3b7bff;--role-bg:#0d1f42;--role-border:#1a3a73}
+html,body{height:100%;overflow:hidden;background:var(--bg0)}
+body{font-family:var(--sans);color:var(--txt);font-size:14px}
+@keyframes pulse2{0%,100%{opacity:.8}50%{opacity:.3}}
+@keyframes ripple{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.5);opacity:0}}
+@keyframes slideIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+.shell{display:grid;grid-template-rows:48px 1fr 52px;height:100vh}
+.topbar{background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:12px;position:relative;z-index:50}
+.logo{display:flex;align-items:center;gap:8px;text-decoration:none;margin-right:4px}
+.logo-mark{width:28px;height:28px;background:var(--role-color);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:500;color:#fff;transition:background .3s}
+.logo-text{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--txt)}
+.sep{width:1px;height:18px;background:var(--border2)}
+.role-switcher{display:flex;align-items:center;gap:6px;position:relative}
+.role-btn{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;border:1px solid var(--role-border);background:var(--role-bg);color:var(--role-color);font-size:11px;font-family:var(--mono);font-weight:500;cursor:pointer;transition:.15s;white-space:nowrap}
+.role-btn:hover{filter:brightness(1.15)}
+.role-dot{width:7px;height:7px;border-radius:50%;background:var(--role-color)}
+.role-dropdown{position:absolute;top:calc(100% + 6px);left:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;min-width:200px;display:none;z-index:200;box-shadow:0 16px 40px #00000080}
+.role-dropdown.open{display:block;animation:fadeUp .15s ease-out}
+.role-option{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:.1s}
+.role-option:hover{background:var(--bg3)}
+.role-option.active{background:var(--bg3)}
+.role-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.role-name{font-size:12px;font-weight:500;color:var(--txt)}
+.role-sub{font-size:10px;color:var(--txt3)}
+.tb-pill{display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--mono);padding:4px 9px;border-radius:20px;white-space:nowrap}
+.pill-live{background:#0a2018;border:1px solid #14532d;color:#4ade80}
+.pill-alert{background:#2a0d0d;border:1px solid #7f1d1d;color:#f87171}
+.pulse-dot{width:6px;height:6px;border-radius:50%;animation:pulse2 1.8s infinite}
+.pd-green{background:#4ade80}.pd-red{background:#f87171}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tb-time{font-size:11px;font-family:var(--mono);color:var(--txt3)}
+.tb-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-family:var(--mono);font-weight:500;cursor:pointer;transition:.15s}
+.tb-avatar:hover{filter:brightness(1.2)}
+.main{display:flex;overflow:hidden}
+.map-wrap{flex:1;position:relative;overflow:hidden;background:var(--bg0)}
+.map-canvas{width:100%;height:100%;position:relative}
+.map-grid{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:44px 44px;opacity:.25;pointer-events:none}
+.scanline{position:absolute;inset:0;overflow:hidden;pointer-events:none;opacity:.04}
+.scanline::after{content:'';position:absolute;left:0;right:0;height:120px;background:linear-gradient(transparent,rgba(59,123,255,.4),transparent);animation:scan 6s linear infinite}
+.zone{position:absolute;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:.2s;overflow:hidden;border:1px solid transparent}
+.zone:hover{transform:scale(1.04);z-index:10}
+.zone-flood{position:absolute;bottom:0;left:0;right:0;border-radius:0 0 9px 9px;transition:height .8s ease}
+.zone-content{position:relative;z-index:2;text-align:center;padding:6px}
+.zone-depth{font-size:13px;font-weight:500;font-family:var(--mono)}
+.zone-id{font-size:8px;font-family:var(--mono);opacity:.7;margin-top:1px}
+.zone-flags{font-size:9px;opacity:.8;margin-top:2px}
+.zone-tip{position:absolute;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:11px;z-index:100;pointer-events:none;min-width:160px;display:none;box-shadow:0 8px 24px #00000060}
+.zone-tip.show{display:block;animation:fadeUp .1s ease-out}
+.tip-row{display:flex;justify-content:space-between;gap:16px;margin-bottom:3px;color:var(--txt2)}
+.tip-val{font-family:var(--mono);font-weight:500;color:var(--txt)}
+.pin{position:absolute;display:flex;flex-direction:column;align-items:center;animation:fadeUp .4s ease-out;z-index:20;pointer-events:none}
+.pin-bubble{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;position:relative}
+.pin-bubble::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:1.5px solid currentColor;animation:ripple 2.5s infinite;opacity:.5}
+.pin-stem{width:1px;height:14px;opacity:.35}
+.pin-label{font-size:8px;font-family:var(--mono);color:var(--txt3);margin-top:1px;white-space:nowrap}
+.map-badge{position:absolute;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;pointer-events:none}
+.mb-tl{top:14px;left:14px}.mb-bl{bottom:14px;left:14px}.mb-tr{top:14px;right:14px;pointer-events:auto}
+.stgcn-num{font-size:22px;font-weight:500;font-family:var(--mono);color:#4ade80;line-height:1}
+.stgcn-lbl{font-size:9px;color:var(--txt3);font-family:var(--mono);margin-top:2px}
+.stgcn-acc{font-size:9px;color:var(--txt2);margin-top:1px}
+.legend-row{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--txt2);margin-bottom:4px}
+.legend-row:last-child{margin-bottom:0}
+.lswatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.map-controls{display:flex;flex-direction:column;gap:6px}
+.mc-btn{display:flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--border2);border-radius:7px;padding:6px 10px;font-size:10px;font-family:var(--mono);color:var(--txt2);cursor:pointer;transition:.15s;white-space:nowrap}
+.mc-btn:hover{background:var(--bg3);color:var(--txt);border-color:var(--border2)}
+.mc-btn.active{color:var(--role-color);border-color:var(--role-border);background:var(--role-bg)}
+.rpanel{width:280px;flex-shrink:0;background:var(--bg1);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;animation:slideIn .25s ease-out}
+.rp-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.rp-role-name{font-size:13px;font-weight:500;color:var(--role-color);display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.rp-sub{font-size:11px;color:var(--txt3)}
+.ptabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.ptab{flex:1;padding:9px 4px;text-align:center;font-size:10px;font-family:var(--mono);color:var(--txt3);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.ptab:hover{color:var(--txt2)}
+.ptab.active{color:var(--role-color);border-bottom-color:var(--role-color)}
+.pbody{flex:1;overflow-y:auto;padding:14px 14px 20px}
+.pbody::-webkit-scrollbar{width:3px}
+.pbody::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.mcard{background:var(--bg2);border-radius:8px;padding:10px 12px;border:1px solid var(--border)}
+.mcard-val{font-size:20px;font-weight:500;font-family:var(--mono);line-height:1;margin-bottom:3px}
+.mcard-lbl{font-size:9px;color:var(--txt3)}
+.slabel{font-size:9px;font-family:var(--mono);color:var(--txt3);letter-spacing:.08em;margin-bottom:8px;margin-top:2px}
+.action-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:8px;margin-bottom:6px;border:1px solid var(--border);background:var(--bg2);color:var(--txt);font-size:12px;cursor:pointer;transition:.15s;text-align:left}
+.action-btn:hover{background:var(--bg3);border-color:var(--border2)}
+.action-btn.primary{background:var(--role-bg);border-color:var(--role-border);color:var(--role-color);font-weight:500}
+.action-btn.primary:hover{filter:brightness(1.15)}
+.action-btn i{font-size:16px;flex-shrink:0}
+.action-btn .ab-sub{font-size:10px;color:var(--txt3);margin-top:1px}
+.alert-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.alert-item:last-child{border-bottom:none}
+.alert-dot-wrap{padding-top:3px}
+.alert-type-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.alert-title{font-size:12px;color:var(--txt);margin-bottom:2px}
+.alert-meta{font-size:10px;color:var(--txt3)}
+.zone-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.zone-row:last-child{border-bottom:none}
+.zone-row:hover .zone-row-name{color:var(--role-color)}
+.zr-bar-wrap{flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.zr-bar{height:100%;border-radius:2px;transition:width .6s ease}
+.zone-row-id{font-size:10px;font-family:var(--mono);color:var(--txt3);width:56px;flex-shrink:0}
+.zone-row-name{font-size:11px;color:var(--txt);width:80px;flex-shrink:0;transition:.15s}
+.zr-depth{font-size:10px;font-family:var(--mono);width:32px;text-align:right;flex-shrink:0}
+.log-item{padding:8px 10px;border-radius:6px;margin-bottom:6px;border-left:2px solid transparent;animation:fadeUp .2s ease-out}
+.log-tag{font-size:8px;font-family:var(--mono);font-weight:500;letter-spacing:.07em;margin-bottom:3px}
+.log-text{font-size:11px;color:var(--txt2);line-height:1.55}
+.log-code{font-family:var(--mono);font-size:10px;color:var(--txt2);background:var(--bg3);padding:4px 6px;border-radius:4px;margin-top:4px;display:block}
+.report-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px}
+.rc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.rc-loc{font-size:11px;font-weight:500;color:var(--txt)}
+.rc-time{font-size:9px;font-family:var(--mono);color:var(--txt3)}
+.rc-body{font-size:11px;color:var(--txt2);line-height:1.5;margin-bottom:6px}
+.rc-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:4px}
+.rc-depth-chip{font-size:9px;font-family:var(--mono);padding:2px 6px;border-radius:4px}
+.route-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.route-card:hover{border-color:var(--role-border)}
+.route-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.route-name{font-size:12px;font-weight:500;color:var(--txt)}
+.route-status{font-size:9px;font-family:var(--mono);padding:2px 7px;border-radius:4px}
+.route-meta{font-size:10px;color:var(--txt3);display:flex;gap:12px}
+.res-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.res-row:last-child{border-bottom:none}
+.res-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.res-name{font-size:12px;color:var(--txt);flex:1}
+.res-sub{font-size:10px;color:var(--txt3)}
+.res-status{font-size:9px;font-family:var(--mono);padding:3px 7px;border-radius:20px;flex-shrink:0}
+.cursor{animation:blink .8s infinite;color:var(--role-color)}
+.bottombar{height:52px;background:var(--bg1);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:0;overflow:hidden}
+.bmetric{display:flex;flex-direction:column;padding:0 16px;border-right:1px solid var(--border)}
+.bmetric:first-child{padding-left:0}
+.bmetric:last-of-type{border-right:none}
+.bm-val{font-size:17px;font-weight:500;font-family:var(--mono);line-height:1}
+.bm-lbl{font-size:9px;color:var(--txt3);margin-top:2px}
+.bottom-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.bb-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;font-size:11px;font-family:var(--mono);font-weight:500;cursor:pointer;transition:.15s;border:1px solid transparent}
+.bb-primary{background:var(--role-color);color:#fff;border-color:var(--role-color)}
+.bb-primary:hover{filter:brightness(1.1)}
+.bb-secondary{background:var(--bg2);border-color:var(--border2);color:var(--txt2)}
+.bb-secondary:hover{background:var(--bg3);color:var(--txt)}
+.rpanel{transition:none}.rpanel.switching{animation:slideIn .2s ease-out}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="logo"><div class="logo-mark" id="logoMark">CF</div><span class="logo-text">CrisisFlow</span></div>
+    <div class="sep"></div>
+    <div class="role-switcher">
+      <div class="role-btn" id="roleBtn" onclick="toggleDropdown()">
+        <span class="role-dot" id="roleDot"></span>
+        <span id="roleBtnLabel">Government · BBMP</span>
+        <i class="ti ti-chevron-down" style="font-size:11px;opacity:.6"></i>
+      </div>
+      <div class="role-dropdown" id="roleDropdown">
+        <div class="role-option active" id="opt-gov" onclick="setRole('gov')"><div class="role-icon" style="background:#0d1f42;color:#3b7bff"><i class="ti ti-building-government" style="font-size:14px"></i></div><div><div class="role-name">Government</div><div class="role-sub">BBMP Control Room</div></div></div>
+        <div class="role-option" id="opt-police" onclick="setRole('police')"><div class="role-icon" style="background:#0d2a1a;color:#22c55e"><i class="ti ti-shield" style="font-size:14px"></i></div><div><div class="role-name">Police</div><div class="role-sub">Traffic & Evacuation</div></div></div>
+        <div class="role-option" id="opt-hospital" onclick="setRole('hospital')"><div class="role-icon" style="background:#2a0d0d;color:#f87171"><i class="ti ti-activity" style="font-size:14px"></i></div><div><div class="role-name">Hospital</div><div class="role-sub">Victoria & Wockhardt</div></div></div>
+        <div class="role-option" id="opt-fire" onclick="setRole('fire')"><div class="role-icon" style="background:#2a1200;color:#fb923c"><i class="ti ti-flame" style="font-size:14px"></i></div><div><div class="role-name">Fire Station</div><div class="role-sub">KC Valley Units</div></div></div>
+        <div class="role-option" id="opt-citizen" onclick="setRole('citizen')"><div class="role-icon" style="background:#1a1040;color:#a78bfa"><i class="ti ti-user" style="font-size:14px"></i></div><div><div class="role-name">Citizen</div><div class="role-sub">Public Alert View</div></div></div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <span style="font-size:11px;color:var(--txt3);font-family:var(--mono)">KC Valley · t+120min forecast</span>
+    <div class="tb-pill pill-live"><span class="pulse-dot pd-green"></span>LIVE</div>
+    <div class="tb-pill pill-alert"><span class="pulse-dot pd-red"></span>FLOOD ALERT</div>
+    <div class="topbar-right">
+      <span class="tb-time" id="clock">--:--:-- IST</span>
+      <div class="tb-avatar" id="avatarEl" style="background:#0d1f42;color:#3b7bff">GV</div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="map-wrap">
+      <div class="map-canvas">
+        <div class="map-grid"></div>
+        <div class="scanline"></div>
+        <div class="map-badge mb-tl"><div class="stgcn-num" id="stgcnTime">--</div><div class="stgcn-lbl">STGCN inference</div><div class="stgcn-acc" id="stgcnAcc">loading...</div></div>
+        <div id="zonesContainer"></div>
+        <div id="pinsContainer"></div>
+        <div class="map-badge mb-bl">
+          <div class="slabel" style="margin-bottom:8px">Flood depth</div>
+          <div class="legend-row"><div class="lswatch" style="background:#ef4444"></div>> 1.5m · Critical</div>
+          <div class="legend-row"><div class="lswatch" style="background:#f97316"></div>1.0–1.5m · Severe</div>
+          <div class="legend-row"><div class="lswatch" style="background:#f59e0b"></div>0.5–1.0m · High</div>
+          <div class="legend-row"><div class="lswatch" style="background:#22c55e"></div>< 0.5m · Moderate</div>
+        </div>
+        <div class="map-badge mb-tr">
+          <div class="map-controls">
+            <div class="mc-btn active" onclick="this.classList.toggle('active')"><i class="ti ti-layers-difference" style="font-size:12px"></i>Flood layer</div>
+            <div class="mc-btn" onclick="this.classList.toggle('active')"><i class="ti ti-route" style="font-size:12px"></i>Routes</div>
+            <div class="mc-btn" onclick="this.classList.toggle('active')"><i class="ti ti-message-circle" style="font-size:12px"></i>Reports</div>
+          </div>
+        </div>
+        <div class="zone-tip" id="zoneTip"></div>
+      </div>
+    </div>
+    <div class="rpanel" id="rPanel">
+      <div class="rp-header"><div class="rp-role-name" id="rpRoleName"><i class="ti ti-building-government" style="font-size:15px"></i>Government · BBMP</div><div class="rp-sub" id="rpRoleSub">Control room · Full access</div></div>
+      <div class="ptabs" id="ptabs"></div>
+      <div class="pbody" id="pbody"></div>
+    </div>
+  </div>
+  <div class="bottombar">
+    <div class="bmetric" id="bm1"><span class="bm-val" style="color:#f87171">--</span><span class="bm-lbl">Active zones</span></div>
+    <div class="bmetric" id="bm2"><span class="bm-val" style="color:#fb923c">--</span><span class="bm-lbl">People at risk</span></div>
+    <div class="bmetric" id="bm3"><span class="bm-val" style="color:#4ade80">--</span><span class="bm-lbl">Resources</span></div>
+    <div class="bmetric" id="bm4"><span class="bm-val" style="color:#3b7bff">--</span><span class="bm-lbl">Loading</span></div>
+    <div class="bottom-actions" id="bottomActions"></div>
+  </div>
+</div>
+<script src="dashboard.js"></script>
+<script src="dashboard_app.js"></script>
+</body>
+</html>
