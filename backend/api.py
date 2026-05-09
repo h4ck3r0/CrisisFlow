@@ -82,6 +82,9 @@ def simulate_storm(req: StormRequest):
         preds = model(X_new, b_edge)
 
     all_depths = preds[0].cpu().numpy()
+    if req.intensity <= 0.05:
+        all_depths.fill(0.0)
+
     max_depths = all_depths.max(axis=1)
     node_depths = {nodes[i]: float(max_depths[i]) for i in range(num_nodes)}
 
@@ -126,6 +129,12 @@ def get_depth_lookup(intensity: float):
     cached = last_simulation_cache
     if cached["intensity"] == intensity and cached["depth_lookup"]:
         return cached["depth_lookup"]
+        
+    if intensity <= 0.05:
+        last_simulation_cache["intensity"] = intensity
+        last_simulation_cache["depth_lookup"] = {}
+        return {}
+        
     result = simulate_storm(StormRequest(intensity=intensity))
     flood_list = result["points"]
     lookup = {nodes[i]: flood_list[i]["depth"] for i in range(len(flood_list))}
@@ -148,7 +157,7 @@ def get_segment_color(avg_depth: float):
     elif avg_depth > 4:
         return [255, 220, 0, 240]
     else:
-        return [0, 220, 180, 240]
+        return [74, 222, 128, 255]
 
 def build_route_response(path, depth_lookup, G_routing):
     segments = []

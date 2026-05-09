@@ -18,6 +18,15 @@ export function useRouting() {
   const [routeColor, setRouteColor] = useState('#8b9bb4');
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
 
+  const [lastRequest, setLastRequest] = useState<{
+    type: 'point2point' | 'nearest';
+    start?: [number, number];
+    end?: [number, number];
+    lat?: number;
+    lon?: number;
+    facilityType?: string;
+  } | null>(null);
+
   const processRouteResult = useCallback((data: RouteResult) => {
     if (data.status === 'success' && data.path) {
       setRouteCoords(data.path);
@@ -60,6 +69,7 @@ export function useRouting() {
   ) => {
     setRouteStatus('AI calculating safest path...');
     setRouteColor('#8b9bb4');
+    setLastRequest({ type: 'point2point', start, end });
 
     try {
       const response = await fetch(`${API_URL}/route`, {
@@ -90,6 +100,7 @@ export function useRouting() {
   ) => {
     setRouteStatus(`Finding nearest ${facilityType}...`);
     setRouteColor('#8b9bb4');
+    setLastRequest({ type: 'nearest', lat, lon, facilityType });
 
     try {
       const response = await fetch(`${API_URL}/route/nearest`, {
@@ -139,11 +150,13 @@ export function useRouting() {
 
   const recalculateRoute = useCallback(
     (intensity: number) => {
-      if (clickPoints.length === 2) {
-        calculateRoute(clickPoints[0], clickPoints[1], intensity);
+      if (lastRequest?.type === 'point2point' && lastRequest.start && lastRequest.end) {
+        calculateRoute(lastRequest.start, lastRequest.end, intensity);
+      } else if (lastRequest?.type === 'nearest' && lastRequest.lat && lastRequest.lon && lastRequest.facilityType) {
+        findNearest(lastRequest.lat, lastRequest.lon, lastRequest.facilityType, intensity);
       }
     },
-    [calculateRoute, clickPoints]
+    [calculateRoute, findNearest, lastRequest]
   );
 
   const clearRoute = useCallback(() => {
@@ -153,6 +166,7 @@ export function useRouting() {
     setRouteInfo(null);
     setRouteStatus('Waiting for input...');
     setRouteColor('#8b9bb4');
+    setLastRequest(null);
   }, []);
 
   return {

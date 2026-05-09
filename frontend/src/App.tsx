@@ -36,7 +36,7 @@ const DUMMY_REPORTS: Report[] = [
 function App() {
   const [viewState, setViewState] = useState<ViewState>(INITIAL_VIEW_STATE);
   const [is3D, setIs3D] = useState(false);
-  const [intensity, setIntensity] = useState(0.5);
+  const [intensity, setIntensity] = useState(0.0);
   const [currentTimestep, setCurrentTimestep] = useState(-1);
   const [depthThreshold, setDepthThreshold] = useState(1.0);
   const [clusterEnabled, setClusterEnabled] = useState(true);
@@ -116,18 +116,31 @@ function App() {
   }, []);
 
   const handleSimulate = useCallback(async () => {
+    if (intensity <= 0.05) {
+      clearSimulation();
+      setCurrentTimestep(-2);
+      return;
+    }
     if (currentTimestep === -2) {
       setCurrentTimestep(-1);
     }
     const result = await simulate(intensity);
-    if (result && clickPoints.length === 2) {
+    if (result && routeCoords) {
       recalculateRoute(intensity);
     }
-  }, [intensity, simulate, clickPoints, recalculateRoute, currentTimestep]);
+  }, [intensity, simulate, routeCoords, recalculateRoute, currentTimestep, clearSimulation]);
 
   const handleClearSimulation = useCallback(() => {
     clearSimulation();
     setCurrentTimestep(-2);
+  }, [clearSimulation]);
+
+  const handleIntensityChange = useCallback((val: number) => {
+    setIntensity(val);
+    if (val <= 0.05) {
+      clearSimulation();
+      setCurrentTimestep(-2);
+    }
   }, [clearSimulation]);
 
   const handleFetchWeather = useCallback(async () => {
@@ -141,11 +154,11 @@ function App() {
         setCurrentTimestep(0);
         await simulate(newIntensity);
       }
-      if (clickPoints.length === 2) {
+      if (routeCoords) {
         recalculateRoute(newIntensity);
       }
     }
-  }, [fetchWeather, clearSimulation, simulate, clickPoints, recalculateRoute]);
+  }, [fetchWeather, clearSimulation, simulate, routeCoords, recalculateRoute]);
 
   const handleAutoRefresh = useCallback(() => {
     toggleAutoRefresh(async () => {
@@ -159,12 +172,12 @@ function App() {
           setCurrentTimestep(0);
           await simulate(newIntensity);
         }
-        if (clickPoints.length === 2) {
+        if (routeCoords) {
           recalculateRoute(newIntensity);
         }
       }
     });
-  }, [toggleAutoRefresh, fetchWeather, clearSimulation, simulate, clickPoints, recalculateRoute]);
+  }, [toggleAutoRefresh, fetchWeather, clearSimulation, simulate, routeCoords, recalculateRoute]);
 
   const onMapClick = useCallback(
     (coordinate: [number, number]) => {
@@ -214,7 +227,7 @@ function App() {
       />
       <RainEffect
         intensity={intensity}
-        active={clusteredPoints.length > 0}
+        active={intensity > 0.05}
       />
       {activeTab === 'gov' && (
         <ControlPanel
@@ -222,7 +235,7 @@ function App() {
           onToggle2D={handleToggle2D}
           onToggle3D={handleToggle3D}
           intensity={intensity}
-          onIntensityChange={setIntensity}
+          onIntensityChange={handleIntensityChange}
           onSimulate={handleSimulate}
           computing={computing}
           computeTime={computeTime}

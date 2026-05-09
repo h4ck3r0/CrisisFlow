@@ -195,6 +195,7 @@ export default function MapView({
         pickable: false,
         widthMinPixels: 14,
         widthMaxPixels: 20,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         getPath: (d: any) => d.path,
         getColor: [0, 180, 255, 40],
         getWidth: 14,
@@ -207,6 +208,7 @@ export default function MapView({
         pickable: false,
         widthMinPixels: 5,
         widthMaxPixels: 8,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         getPath: (d: RouteSegment) => d.path as any,
         getColor: (d: RouteSegment) => d.color,
         getWidth: 5,
@@ -292,10 +294,12 @@ export default function MapView({
   return (
     <DeckGL
       viewState={viewState}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onViewStateChange={(params: any) => onViewStateChange(params.viewState)}
       controller={true}
       layers={layers}
       effects={effects}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onClick={(info: any) => {
         if (info.coordinate) {
           onMapClick(info.coordinate as [number, number]);
