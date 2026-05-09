@@ -195,7 +195,7 @@ export default function MapView({
         pickable: false,
         widthMinPixels: 14,
         widthMaxPixels: 20,
-        getPath: (d: { path: number[][] }) => d.path,
+        getPath: (d: any) => d.path,
         getColor: [0, 180, 255, 40],
         getWidth: 14,
         rounded: true,
@@ -207,7 +207,7 @@ export default function MapView({
         pickable: false,
         widthMinPixels: 5,
         widthMaxPixels: 8,
-        getPath: (d: RouteSegment) => d.path,
+        getPath: (d: RouteSegment) => d.path as any,
         getColor: (d: RouteSegment) => d.color,
         getWidth: 5,
         rounded: true,
@@ -292,13 +292,13 @@ export default function MapView({
   return (
     <DeckGL
       viewState={viewState}
-      onViewStateChange={({ viewState: vs }: { viewState: ViewState }) => onViewStateChange(vs)}
+      onViewStateChange={(params: any) => onViewStateChange(params.viewState)}
       controller={true}
       layers={layers}
       effects={effects}
-      onClick={(info: { coordinate?: [number, number] }) => {
+      onClick={(info: any) => {
         if (info.coordinate) {
-          onMapClick(info.coordinate);
+          onMapClick(info.coordinate as [number, number]);
         }
       }}
       getTooltip={getTooltip}
