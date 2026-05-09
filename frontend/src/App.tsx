@@ -1,13 +1,15 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import MapView from './components/MapView';
 import ControlPanel from './components/ControlPanel';
 import RainEffect from './components/RainEffect';
-import TopRightNav, { type NavTab } from './components/TopRightNav';
-import BottomRightPanel, { type Report } from './components/BottomRightPanel';
+import Topbar from './components/Topbar';
+import RolePanel from './components/RolePanel';
 import { useFloodSimulation } from './hooks/useFloodSimulation';
 import { useWeather } from './hooks/useWeather';
 import { useRouting } from './hooks/useRouting';
 import { useFloodClustering } from './hooks/useFloodClustering';
+import { useDashboard } from './hooks/useDashboard';
+import { ROLES, type RoleId } from './constants/roles';
 import {
   INITIAL_VIEW_STATE,
   VIEW_STATE_2D,
@@ -15,23 +17,7 @@ import {
   EMERGENCY_INFRA,
 } from './constants';
 import type { FloodPoint, GovStats, ViewState } from './types';
-
-const DUMMY_REPORTS: Report[] = [
-  {
-    id: '1',
-    type: 'police',
-    description: 'Traffic congestion due to water logging near main junction.',
-    location: [77.63, 12.95],
-    timestamp: new Date(Date.now() - 1000 * 60 * 15),
-  },
-  {
-    id: '2',
-    type: 'hospital',
-    description: 'Medical emergency: Elderly person needs evacuation.',
-    location: [77.62, 12.94],
-    timestamp: new Date(Date.now() - 1000 * 60 * 45),
-  },
-];
+import './dashboard.css';
 
 function App() {
   const [viewState, setViewState] = useState<ViewState>(INITIAL_VIEW_STATE);
@@ -41,12 +27,11 @@ function App() {
   const [depthThreshold, setDepthThreshold] = useState(1.0);
   const [clusterEnabled, setClusterEnabled] = useState(true);
 
-  // New states for User/Gov/Police/Hospital
-  const [activeTab, setActiveTab] = useState<NavTab>('user');
-  const [reports, setReports] = useState<Report[]>(DUMMY_REPORTS);
-  const [isSettingLocation, setIsSettingLocation] = useState(false);
-  const [currentPoint, setCurrentPoint] = useState<[number, number] | null>(null);
+  // Role state
+  const [currentRole, setCurrentRole] = useState<RoleId>('gov');
   const [alert, setAlert] = useState<string | null>(null);
+  const [currentPoint, setCurrentPoint] = useState<[number, number] | null>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
 
   const { floodPoints, floodTimeline, computing, computeTime, simulate, clearSimulation } =
     useFloodSimulation();
@@ -62,6 +47,27 @@ function App() {
     clickPoints, routeCoords, routeSegments, routeStatus, routeColor,
     routeInfo, handleMapClick, recalculateRoute, findNearest, clearRoute,
   } = useRouting();
+
+  // MongoDB dashboard data
+  const { data: dashboardData, fetchDashboard, runTriage } = useDashboard();
+
+  // Role change handler
+  const handleRoleChange = useCallback((role: RoleId) => {
+    setCurrentRole(role);
+    fetchDashboard(role);
+    const cfg = ROLES[role];
+    document.documentElement.style.setProperty('--role-color', cfg.color);
+    document.documentElement.style.setProperty('--role-bg', cfg.bg);
+    document.documentElement.style.setProperty('--role-border', cfg.border);
+  }, [fetchDashboard]);
+
+  // Set initial role theme
+  useEffect(() => {
+    const cfg = ROLES[currentRole];
+    document.documentElement.style.setProperty('--role-color', cfg.color);
+    document.documentElement.style.setProperty('--role-bg', cfg.bg);
+    document.documentElement.style.setProperty('--role-border', cfg.border);
+  }, []);
 
   const activeFloodPoints = useMemo((): FloodPoint[] => {
     if (currentTimestep === -2) return [];
@@ -121,14 +127,13 @@ function App() {
       setCurrentTimestep(-2);
       return;
     }
-    if (currentTimestep === -2) {
-      setCurrentTimestep(-1);
-    }
+    if (currentTimestep === -2) setCurrentTimestep(-1);
     const result = await simulate(intensity);
-    if (result && routeCoords) {
-      recalculateRoute(intensity);
+    if (result) {
+      fetchDashboard(currentRole);
+      if (routeCoords) recalculateRoute(intensity);
     }
-  }, [intensity, simulate, routeCoords, recalculateRoute, currentTimestep, clearSimulation]);
+  }, [intensity, simulate, routeCoords, recalculateRoute, currentTimestep, clearSimulation, fetchDashboard, currentRole]);
 
   const handleClearSimulation = useCallback(() => {
     clearSimulation();
@@ -137,159 +142,164 @@ function App() {
 
   const handleIntensityChange = useCallback((val: number) => {
     setIntensity(val);
-    if (val <= 0.05) {
-      clearSimulation();
-      setCurrentTimestep(-2);
-    }
+    if (val <= 0.05) { clearSimulation(); setCurrentTimestep(-2); }
   }, [clearSimulation]);
 
   const handleFetchWeather = useCallback(async () => {
     const newIntensity = await fetchWeather();
     if (newIntensity !== null) {
       setIntensity(newIntensity);
-      if (newIntensity <= 0.05) {
-        clearSimulation();
-        setCurrentTimestep(-2);
-      } else {
-        setCurrentTimestep(0);
-        await simulate(newIntensity);
+      if (newIntensity <= 0.05) { clearSimulation(); setCurrentTimestep(-2); }
+      else { 
+        setCurrentTimestep(0); 
+        const result = await simulate(newIntensity); 
+        if (result) fetchDashboard(currentRole);
       }
-      if (routeCoords) {
-        recalculateRoute(newIntensity);
-      }
+      if (routeCoords) recalculateRoute(newIntensity);
     }
-  }, [fetchWeather, clearSimulation, simulate, routeCoords, recalculateRoute]);
+  }, [fetchWeather, clearSimulation, simulate, routeCoords, recalculateRoute, fetchDashboard, currentRole]);
 
   const handleAutoRefresh = useCallback(() => {
     toggleAutoRefresh(async () => {
       const newIntensity = await fetchWeather();
       if (newIntensity !== null) {
         setIntensity(newIntensity);
-        if (newIntensity <= 0.05) {
-          clearSimulation();
-          setCurrentTimestep(-2);
-        } else {
-          setCurrentTimestep(0);
-          await simulate(newIntensity);
+        if (newIntensity <= 0.05) { clearSimulation(); setCurrentTimestep(-2); }
+        else { 
+          setCurrentTimestep(0); 
+          const result = await simulate(newIntensity); 
+          if (result) fetchDashboard(currentRole);
         }
-        if (routeCoords) {
-          recalculateRoute(newIntensity);
-        }
+        if (routeCoords) recalculateRoute(newIntensity);
       }
     });
-  }, [toggleAutoRefresh, fetchWeather, clearSimulation, simulate, routeCoords, recalculateRoute]);
+  }, [toggleAutoRefresh, fetchWeather, clearSimulation, simulate, routeCoords, recalculateRoute, fetchDashboard, currentRole]);
 
   const onMapClick = useCallback(
     (coordinate: [number, number]) => {
-      if (isSettingLocation) {
-        setCurrentPoint(coordinate);
-        setIsSettingLocation(false);
-      } else {
-        handleMapClick(coordinate, intensity);
-      }
+      setCurrentPoint(coordinate);
+      handleMapClick(coordinate, intensity);
     },
-    [handleMapClick, intensity, isSettingLocation]
+    [handleMapClick, intensity]
   );
 
-  const handleTabChange = useCallback((tab: NavTab) => {
-    setActiveTab(tab);
-    if (tab === 'gov') {
-      setIntensity((prev) => Math.min(prev + 0.2, 1.0));
-      setAlert('⚠️ GOVERNMENT EMERGENCY: Storm intensity increased!');
-      setTimeout(() => setAlert(null), 5000);
-    }
+  const handleFindNearest = useCallback((type: string) => {
+    const pt = clickPoints.length > 0 ? clickPoints[0] : currentPoint;
+    if (pt) findNearest(pt[1], pt[0], type, intensity);
+  }, [clickPoints, currentPoint, findNearest, intensity]);
+
+  const handleZoneClick = useCallback((lat: number, lng: number) => {
+    setViewState((prev) => ({
+      ...prev,
+      latitude: lat,
+      longitude: lng,
+      zoom: 15,
+      transitionDuration: 1000,
+    }));
   }, []);
 
-  const handleReport = useCallback((newReport: Omit<Report, 'id' | 'timestamp'>) => {
-    const report: Report = {
-      ...newReport,
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: new Date(),
-    };
-    setReports((prev) => [report, ...prev]);
-    setAlert(`✅ Report sent to ${newReport.type}`);
-    setTimeout(() => setAlert(null), 3000);
-  }, []);
+  const handlePrimaryAction = useCallback(async () => {
+    if (currentRole === 'gov') {
+      const result = await runTriage();
+      if (result) {
+        setAlert(`✓ Triage Commander complete. ${result.dispatch_count} units dispatched.`);
+        setTimeout(() => setAlert(null), 4000);
+        fetchDashboard('gov');
+      }
+    } else {
+      setAlert(`View action triggered for ${currentRole}. Details would expand here in production.`);
+      setTimeout(() => setAlert(null), 3000);
+    }
+  }, [currentRole, runTriage, fetchDashboard]);
 
   return (
-    <div className="app-root">
-      <MapView
-        viewState={viewState}
-        onViewStateChange={setViewState}
-        is3D={is3D}
-        activeFloodPoints={clusteredPoints}
-        emergencyData={emergencyData}
-        clickPoints={clickPoints}
-        routeCoords={routeCoords}
-        routeSegments={routeSegments}
-        onMapClick={onMapClick}
-        currentPoint={currentPoint}
-      />
-      <RainEffect
+    <div className="cf-shell">
+      <Topbar 
+        currentRole={currentRole} 
+        onRoleChange={handleRoleChange} 
         intensity={intensity}
-        active={intensity > 0.05}
+        simulationActive={intensity > 0.05}
       />
-      {activeTab === 'gov' && (
-        <ControlPanel
-          is3D={is3D}
-          onToggle2D={handleToggle2D}
-          onToggle3D={handleToggle3D}
-          intensity={intensity}
-          onIntensityChange={handleIntensityChange}
-          onSimulate={handleSimulate}
-          computing={computing}
-          computeTime={computeTime}
-          onFetchWeather={handleFetchWeather}
-          weatherFetching={weatherFetching}
-          weatherStatus={weatherStatus}
-          weatherColor={weatherColor}
-          autoRefresh={autoRefresh}
-          onToggleAutoRefresh={handleAutoRefresh}
-          govStats={govStats}
-          currentTimestep={currentTimestep}
-          onTimestepChange={(t) => setCurrentTimestep(t)}
-          onMaxClick={() => setCurrentTimestep(-1)}
-          onClearSimulation={handleClearSimulation}
-          timelineDisabled={floodTimeline.length === 0}
+
+      <div className="cf-main">
+        <div className="cf-map-wrap">
+          <MapView
+            viewState={viewState}
+            onViewStateChange={setViewState}
+            is3D={is3D}
+            activeFloodPoints={clusteredPoints}
+            emergencyData={emergencyData}
+            clickPoints={clickPoints}
+            routeCoords={routeCoords}
+            routeSegments={routeSegments}
+            onMapClick={onMapClick}
+            currentPoint={currentPoint}
+          />
+          <RainEffect intensity={intensity} active={intensity > 0.05} />
+
+          {/* Simulation controls — Gov only, minimizable */}
+          {currentRole === 'gov' && (
+            <>
+              <button
+                className="cf-panel-toggle"
+                onClick={() => setPanelOpen(!panelOpen)}
+                title={panelOpen ? 'Minimize panel' : 'Expand panel'}
+              >
+                {panelOpen ? '◀ Hide' : '▶ STGCN Controls'}
+              </button>
+              {panelOpen && (
+                <ControlPanel
+                  is3D={is3D}
+                  onToggle2D={handleToggle2D}
+                  onToggle3D={handleToggle3D}
+                  intensity={intensity}
+                  onIntensityChange={handleIntensityChange}
+                  onSimulate={handleSimulate}
+                  computing={computing}
+                  computeTime={computeTime}
+                  onFetchWeather={handleFetchWeather}
+                  weatherFetching={weatherFetching}
+                  weatherStatus={weatherStatus}
+                  weatherColor={weatherColor}
+                  autoRefresh={autoRefresh}
+                  onToggleAutoRefresh={handleAutoRefresh}
+                  govStats={govStats}
+                  currentTimestep={currentTimestep}
+                  onTimestepChange={(t) => setCurrentTimestep(t)}
+                  onMaxClick={() => setCurrentTimestep(-1)}
+                  onClearSimulation={handleClearSimulation}
+                  timelineDisabled={floodTimeline.length === 0}
+                  routeStatus={routeStatus}
+                  routeColor={routeColor}
+                  showClearRoute={clickPoints.length > 0}
+                  onClearRoute={clearRoute}
+                  routeInfo={routeInfo}
+                  onFindNearest={handleFindNearest}
+                  hasStartPoint={clickPoints.length > 0 || currentPoint !== null}
+                  depthThreshold={depthThreshold}
+                  onDepthThresholdChange={setDepthThreshold}
+                  clusterEnabled={clusterEnabled}
+                  onClusterToggle={() => setClusterEnabled(!clusterEnabled)}
+                />
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Right panel — role-specific data */}
+        <RolePanel
+          role={currentRole}
+          data={dashboardData}
+          onRefresh={() => fetchDashboard(currentRole)}
+          currentPoint={currentPoint}
+          onFindNearest={handleFindNearest}
+          routeInfo={routeInfo}
           routeStatus={routeStatus}
           routeColor={routeColor}
-          showClearRoute={clickPoints.length > 0}
-          onClearRoute={clearRoute}
-          routeInfo={routeInfo}
-          onFindNearest={(type: string) => {
-            if (clickPoints.length > 0) {
-              findNearest(clickPoints[0][1], clickPoints[0][0], type, intensity);
-            }
-          }}
-          hasStartPoint={clickPoints.length > 0}
-          depthThreshold={depthThreshold}
-          onDepthThresholdChange={setDepthThreshold}
-          clusterEnabled={clusterEnabled}
-          onClusterToggle={() => setClusterEnabled(!clusterEnabled)}
+          hasStartPoint={clickPoints.length > 0 || currentPoint !== null}
+          onZoneClick={handleZoneClick}
         />
-      )}
-
-      <TopRightNav activeTab={activeTab} onTabChange={handleTabChange} />
-
-      <BottomRightPanel
-        activeTab={activeTab}
-        reports={reports}
-        onReport={handleReport}
-        isSettingLocation={isSettingLocation}
-        onToggleSetLocation={() => setIsSettingLocation(!isSettingLocation)}
-        currentPoint={currentPoint}
-        onFindNearest={(type: string) => {
-          if (clickPoints.length > 0) {
-            findNearest(clickPoints[0][1], clickPoints[0][0], type, intensity);
-          } else if (currentPoint) {
-            findNearest(currentPoint[1], currentPoint[0], type, intensity);
-          }
-        }}
-        routeInfo={routeInfo}
-        routeStatus={routeStatus}
-        routeColor={routeColor}
-        hasStartPoint={clickPoints.length > 0 || currentPoint !== null}
-      />
+      </div>
 
       {alert && <div className="alert-overlay">{alert}</div>}
     </div>

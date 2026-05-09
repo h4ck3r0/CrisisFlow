@@ -1,0 +1,185 @@
+/* ── CrisisFlow Dashboard Styles ── */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --cf-bg0:#07090f;--cf-bg1:#0d1117;--cf-bg2:#141b27;--cf-bg3:#1c2535;--cf-bg4:#243042;
+  --cf-border:#1f2d42;--cf-border2:#2a3d57;
+  --cf-txt:#dce6f5;--cf-txt2:#7a91b0;--cf-txt3:#3d5272;
+  --cf-mono:'DM Mono',monospace;--cf-sans:'DM Sans',sans-serif;
+  --role-color:#3b7bff;--role-bg:#0d1f42;--role-border:#1a3a73;
+}
+
+@keyframes cf-pulse2{0%,100%{opacity:.8}50%{opacity:.3}}
+@keyframes cf-fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes cf-slideIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+
+/* ── Shell Layout ── */
+.cf-shell{display:grid;grid-template-rows:48px 1fr;height:100vh;width:100vw;overflow:hidden;background:var(--cf-bg0)}
+
+/* ── Topbar ── */
+.cf-topbar{background:var(--cf-bg1);border-bottom:1px solid var(--cf-border);display:flex;align-items:center;padding:0 16px;gap:12px;z-index:50}
+.cf-logo{display:flex;align-items:center;gap:8px;margin-right:4px}
+.cf-logo-mark{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--cf-mono);font-size:11px;font-weight:500;color:#fff;transition:background .3s}
+.cf-logo-text{font-family:var(--cf-mono);font-size:13px;font-weight:500;color:var(--cf-txt)}
+.cf-sep{width:1px;height:18px;background:var(--cf-border2)}
+.cf-role-switcher{position:relative}
+.cf-role-btn{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;font-size:11px;font-family:var(--cf-mono);font-weight:500;cursor:pointer;transition:.15s;white-space:nowrap;border:1px solid var(--role-border);background:var(--role-bg);color:var(--role-color)}
+.cf-role-btn:hover{filter:brightness(1.15)}
+.cf-role-dot{width:7px;height:7px;border-radius:50%}
+.cf-role-dropdown{position:absolute;top:calc(100% + 6px);left:0;background:var(--cf-bg2);border:1px solid var(--cf-border2);border-radius:10px;padding:6px;min-width:200px;z-index:200;box-shadow:0 16px 40px #00000080;animation:cf-fadeUp .15s ease-out}
+.cf-role-option{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:.1s}
+.cf-role-option:hover{background:var(--cf-bg3)}
+.cf-role-option.active{background:var(--cf-bg3)}
+.cf-role-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.cf-role-name{font-size:12px;font-weight:500;color:var(--cf-txt)}
+.cf-role-sub{font-size:10px;color:var(--cf-txt3)}
+.cf-forecast-label{font-size:11px;color:var(--cf-txt3);font-family:var(--cf-mono)}
+.cf-pill{display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--cf-mono);padding:4px 9px;border-radius:20px;white-space:nowrap}
+.cf-pill-live{background:#0a2018;border:1px solid #14532d;color:#4ade80}
+.cf-pill-alert{background:#2a0d0d;border:1px solid #7f1d1d;color:#f87171}
+.cf-pulse-dot{width:6px;height:6px;border-radius:50%;animation:cf-pulse2 1.8s infinite}
+.cf-pd-green{background:#4ade80}.cf-pd-red{background:#f87171}
+.cf-topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.cf-tb-time{font-size:11px;font-family:var(--cf-mono);color:var(--cf-txt3)}
+.cf-tb-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-family:var(--cf-mono);font-weight:500}
+
+/* ── Main area ── */
+.cf-main{display:flex;overflow:hidden;flex:1;position:relative}
+.cf-map-wrap{flex:1;position:relative;overflow:hidden}
+
+/* ── Right Panel ── */
+.cf-rpanel{width:300px;flex-shrink:0;background:var(--cf-bg1);border-left:1px solid var(--cf-border);display:flex;flex-direction:column;overflow:hidden;animation:cf-slideIn .25s ease-out}
+.cf-rpanel-toggle{position:absolute;top:50%;right:300px;transform:translateY(-50%);z-index:30;padding:10px 6px;border-radius:8px 0 0 8px;border:1px solid var(--cf-border2);border-right:none;background:var(--cf-bg1);color:var(--cf-txt3);font-size:12px;cursor:pointer;transition:all .2s;line-height:1;writing-mode:horizontal-tb}
+.cf-rpanel-toggle:hover{background:var(--cf-bg2);color:var(--cf-txt)}
+/* When panel is collapsed, button sits at the right edge */
+.cf-main:not(:has(.cf-rpanel)) .cf-rpanel-toggle{right:0}
+.cf-rp-header{padding:14px 16px 10px;border-bottom:1px solid var(--cf-border);flex-shrink:0}
+.cf-rp-role-name{font-size:13px;font-weight:500;display:flex;align-items:center;gap:7px;margin-bottom:2px}
+.cf-rp-sub{font-size:11px;color:var(--cf-txt3)}
+.cf-ptabs{display:flex;border-bottom:1px solid var(--cf-border);flex-shrink:0}
+.cf-ptab{flex:1;padding:9px 4px;text-align:center;font-size:10px;font-family:var(--cf-mono);color:var(--cf-txt3);cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.cf-ptab:hover{color:var(--cf-txt2)}
+.cf-ptab.active{color:var(--role-color);border-bottom-color:var(--role-color)}
+.cf-pbody{flex:1;overflow-y:auto;padding:14px 14px 20px;font-family:var(--cf-sans);font-size:14px;color:var(--cf-txt)}
+.cf-pbody::-webkit-scrollbar{width:3px}
+.cf-pbody::-webkit-scrollbar-thumb{background:var(--cf-border2);border-radius:2px}
+
+/* ── Panel content pieces ── */
+.cf-slabel{font-size:9px;font-family:var(--cf-mono);color:var(--cf-txt3);letter-spacing:.08em;margin-bottom:8px;margin-top:2px;text-transform:uppercase}
+.cf-empty{font-size:11px;color:var(--cf-txt3)}
+.cf-zone-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--cf-border);cursor:pointer}
+.cf-zone-row:last-child{border-bottom:none}
+.cf-zr-id{font-size:10px;font-family:var(--cf-mono);color:var(--cf-txt3);width:56px;flex-shrink:0}
+.cf-zr-name{font-size:11px;color:var(--cf-txt);width:80px;flex-shrink:0;transition:.15s}
+.cf-zone-row:hover .cf-zr-name{color:var(--role-color)}
+.cf-zr-bar-wrap{flex:1;height:4px;background:var(--cf-bg3);border-radius:2px;overflow:hidden}
+.cf-zr-bar{height:100%;border-radius:2px;transition:width .6s ease}
+.cf-zr-depth{font-size:10px;font-family:var(--cf-mono);width:32px;text-align:right;flex-shrink:0}
+
+.cf-res-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--cf-border)}
+.cf-res-row:last-child{border-bottom:none}
+.cf-res-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.cf-res-name{font-size:12px;color:var(--cf-txt)}
+.cf-res-sub{font-size:10px;color:var(--cf-txt3)}
+.cf-res-status{font-size:9px;font-family:var(--cf-mono);padding:3px 7px;border-radius:20px;flex-shrink:0}
+
+.cf-report-card{background:var(--cf-bg2);border:1px solid var(--cf-border);border-radius:8px;padding:10px;margin-bottom:8px}
+.cf-rc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}
+.cf-rc-loc{font-size:11px;font-weight:500;color:var(--cf-txt)}
+.cf-rc-time{font-size:9px;font-family:var(--cf-mono);color:var(--cf-txt3)}
+.cf-rc-body{font-size:11px;color:var(--cf-txt2);line-height:1.5;margin-bottom:6px}
+.cf-rc-badge{display:inline-flex;align-items:center;gap:4px;font-size:9px;font-family:var(--cf-mono);padding:2px 7px;border-radius:4px}
+.cf-rc-depth-chip{font-size:9px;font-family:var(--cf-mono);padding:2px 6px;border-radius:4px;background:var(--cf-bg3);color:var(--cf-txt2)}
+
+.cf-alert-item{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--cf-border)}
+.cf-alert-item:last-child{border-bottom:none}
+.cf-alert-dot-wrap{padding-top:3px}
+.cf-alert-type-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.cf-alert-title{font-size:12px;color:var(--cf-txt);margin-bottom:2px}
+.cf-alert-meta{font-size:10px;color:var(--cf-txt3)}
+
+.cf-action-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:8px;margin-bottom:6px;border:1px solid var(--cf-border);background:var(--cf-bg2);color:var(--cf-txt);font-size:12px;cursor:pointer;transition:.15s;text-align:left;font-family:var(--cf-sans)}
+.cf-action-btn:hover{background:var(--cf-bg3);border-color:var(--cf-border2)}
+.cf-action-btn:disabled{opacity:.5;cursor:not-allowed}
+.cf-action-primary{background:var(--role-bg);border-color:var(--role-border);color:var(--role-color);font-weight:500}
+.cf-action-primary:hover{filter:brightness(1.15)}
+.cf-ab-sub{font-size:10px;color:var(--cf-txt3);margin-top:1px}
+
+.cf-log-item{padding:8px 10px;border-radius:6px;margin-bottom:6px;border-left:2px solid transparent;background:var(--cf-bg2);animation:cf-fadeUp .2s ease-out}
+.cf-log-text{font-size:11px;color:var(--cf-txt2);line-height:1.55}
+
+.cf-capacity-bar{height:4px;background:var(--cf-bg3);border-radius:2px;overflow:hidden}
+.cf-capacity-fill{height:100%;border-radius:2px;transition:width .6s ease}
+
+.cf-flood-warning{background:#2a0d0d;border:1px solid #7f1d1d;border-radius:8px;padding:12px;margin-bottom:14px}
+.cf-fw-title{font-size:12px;font-weight:500;color:#f87171;margin-bottom:4px}
+.cf-fw-body{font-size:11px;color:#fca5a5;line-height:1.6}
+
+.cf-status-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--cf-border)}
+.cf-status-label{font-size:11px;color:var(--cf-txt3)}
+.cf-status-val{font-size:11px;font-family:var(--cf-mono)}
+
+.cf-report-textarea{width:100%;background:var(--cf-bg2);border:1px solid var(--cf-border);border-radius:7px;padding:8px;font-size:11px;color:var(--cf-txt);font-family:var(--cf-sans);resize:none;margin-bottom:8px;outline:none}
+.cf-report-textarea:focus{border-color:var(--role-color)}
+.cf-input-label{font-size:10px;color:var(--cf-txt3);margin-bottom:4px}
+.cf-input{width:100%;background:var(--cf-bg2);border:1px solid var(--cf-border);border-radius:7px;padding:6px;font-size:11px;color:var(--cf-txt);font-family:var(--cf-mono);outline:none}
+.cf-input:focus{border-color:var(--role-color)}
+
+/* ── Bottom Bar ── */
+.cf-bottombar{height:52px;background:var(--cf-bg1);border-top:1px solid var(--cf-border);display:flex;align-items:center;padding:0 18px;gap:0;overflow:hidden}
+.cf-bmetric{display:flex;flex-direction:column;padding:0 16px;border-right:1px solid var(--cf-border)}
+.cf-bmetric:first-child{padding-left:0}
+.cf-bmetric:last-of-type{border-right:none}
+.cf-bm-val{font-size:17px;font-weight:500;font-family:var(--cf-mono);line-height:1}
+.cf-bm-lbl{font-size:9px;color:var(--cf-txt3);margin-top:2px}
+.cf-bottom-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.cf-bb-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;font-size:11px;font-family:var(--cf-mono);font-weight:500;cursor:pointer;transition:.15s;border:1px solid transparent;color:#fff}
+.cf-bb-primary{border-color:var(--role-color)}
+.cf-bb-primary:hover{filter:brightness(1.1)}
+.cf-bb-secondary{background:var(--cf-bg2);border-color:var(--cf-border2);color:var(--cf-txt2)}
+.cf-bb-secondary:hover{background:var(--cf-bg3);color:var(--cf-txt)}
+
+.cf-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: var(--cf-mono);
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.15s;
+  border: 1px solid var(--cf-border2);
+  background: var(--cf-bg3);
+  color: var(--cf-txt);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.cf-btn:hover { background: var(--cf-bg4); border-color: var(--cf-txt3); }
+.cf-btn.primary { background: var(--role-color); border-color: var(--role-color); color: #fff; }
+.cf-btn.primary:hover { filter: brightness(1.1); }
+
+.cf-mini-btn {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-family: var(--cf-mono);
+  cursor: pointer;
+  transition: 0.15s;
+  border: 1px solid var(--cf-border2);
+  background: var(--cf-bg3);
+  color: var(--cf-txt2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.cf-mini-btn:hover { background: var(--cf-bg4); color: var(--cf-txt); }
+
+/* ── Emergency Finder Grid ── */
+.cf-finder-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+
+/* ── Control Panel toggle button ── */
+.cf-panel-toggle{position:absolute;top:16px;left:16px;z-index:25;padding:8px 14px;border-radius:8px;border:1px solid var(--cf-border2);background:var(--cf-bg1);color:var(--cf-txt2);font-family:var(--cf-mono);font-size:11px;font-weight:500;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px #0008;display:flex;align-items:center;gap:6px}
+.cf-panel-toggle:hover{background:var(--cf-bg2);color:var(--cf-txt);border-color:var(--role-color)}
+
+/* ── Control Panel overlay in new layout ── */
+.cf-controls-overlay{position:absolute;top:12px;left:12px;z-index:20;max-height:calc(100% - 24px);overflow-y:auto}

@@ -17,3 +17,5 @@ torch==2.11.0
 torch-geometric==2.7.0
 
 pydantic==2.13.2
+
+motor==3.7.1
