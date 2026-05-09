@@ -1,12 +1,57 @@
 import { useState, useCallback } from 'react';
 import { API_URL } from '../constants';
-import type { RouteResult } from '../types';
+import type { RouteResult, RouteSegment, RouteETA } from '../types';
+
+export interface RouteInfo {
+  distanceKm: number;
+  maxDepth: number;
+  riskLevel: string;
+  facilityName?: string;
+  eta: RouteETA;
+}
 
 export function useRouting() {
   const [clickPoints, setClickPoints] = useState<[number, number][]>([]);
   const [routeCoords, setRouteCoords] = useState<number[][] | null>(null);
+  const [routeSegments, setRouteSegments] = useState<RouteSegment[]>([]);
   const [routeStatus, setRouteStatus] = useState('Waiting for input...');
   const [routeColor, setRouteColor] = useState('#8b9bb4');
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+
+  const processRouteResult = useCallback((data: RouteResult) => {
+    if (data.status === 'success' && data.path) {
+      setRouteCoords(data.path);
+      setRouteSegments(data.segments || []);
+      setRouteInfo({
+        distanceKm: data.distance_km || 0,
+        maxDepth: data.max_depth || 0,
+        riskLevel: data.risk_level || 'SAFE',
+        facilityName: data.facility_name,
+        eta: data.eta || { walk: null, bike: null, car: null },
+      });
+
+      const risk = data.risk_level || 'SAFE';
+      if (risk === 'CRITICAL') {
+        setRouteStatus(`⚠️ Route found — CRITICAL (${data.distance_km} km)`);
+        setRouteColor('#ff3366');
+      } else if (risk === 'HIGH') {
+        setRouteStatus(`⚠️ Route found — HIGH risk (${data.distance_km} km)`);
+        setRouteColor('#ff8800');
+      } else if (risk === 'MODERATE') {
+        setRouteStatus(`Route found — moderate risk (${data.distance_km} km)`);
+        setRouteColor('#ffd200');
+      } else {
+        setRouteStatus(`✅ Safe route found (${data.distance_km} km)`);
+        setRouteColor('#4ade80');
+      }
+    } else {
+      setRouteCoords(null);
+      setRouteSegments([]);
+      setRouteInfo(null);
+      setRouteStatus('No safe route. All paths flooded.');
+      setRouteColor('#ff3366');
+    }
+  }, []);
 
   const calculateRoute = useCallback(async (
     start: [number, number],
@@ -28,24 +73,41 @@ export function useRouting() {
           intensity,
         }),
       });
-
       const data: RouteResult = await response.json();
-
-      if (data.status === 'success' && data.path) {
-        setRouteCoords(data.path);
-        setRouteStatus('Safe route found!');
-        setRouteColor('#4ade80');
-      } else {
-        setRouteCoords(null);
-        setRouteStatus('No safe route. All paths flooded.');
-        setRouteColor('#ff3366');
-      }
+      processRouteResult(data);
     } catch (e) {
       console.error('Routing Error:', e);
       setRouteStatus('Error calculating route.');
       setRouteColor('#ff3366');
     }
-  }, []);
+  }, [processRouteResult]);
+
+  const findNearest = useCallback(async (
+    lat: number,
+    lon: number,
+    facilityType: string,
+    intensity: number
+  ) => {
+    setRouteStatus(`Finding nearest ${facilityType}...`);
+    setRouteColor('#8b9bb4');
+
+    try {
+      const response = await fetch(`${API_URL}/route/nearest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lon, facility_type: facilityType, intensity }),
+      });
+      const data: RouteResult = await response.json();
+      processRouteResult(data);
+      if (data.facility_name) {
+        setRouteStatus((prev) => `${prev} → ${data.facility_name}`);
+      }
+    } catch (e) {
+      console.error('Nearest Routing Error:', e);
+      setRouteStatus('Error finding nearest facility.');
+      setRouteColor('#ff3366');
+    }
+  }, [processRouteResult]);
 
   const handleMapClick = useCallback(
     (coordinate: [number, number], intensity: number) => {
@@ -54,6 +116,8 @@ export function useRouting() {
         if (prev.length >= 2) {
           updated = [coordinate];
           setRouteCoords(null);
+          setRouteSegments([]);
+          setRouteInfo(null);
           setRouteStatus('Click destination on the map...');
           setRouteColor('#8b9bb4');
         } else {
@@ -64,7 +128,6 @@ export function useRouting() {
           setRouteStatus('Click destination on the map...');
           setRouteColor('#8b9bb4');
         } else if (updated.length === 2) {
-          // Trigger calculation outside of setClickPoints to be safe
           setTimeout(() => calculateRoute(updated[0], updated[1], intensity), 0);
         }
 
@@ -86,9 +149,22 @@ export function useRouting() {
   const clearRoute = useCallback(() => {
     setClickPoints([]);
     setRouteCoords(null);
+    setRouteSegments([]);
+    setRouteInfo(null);
     setRouteStatus('Waiting for input...');
     setRouteColor('#8b9bb4');
   }, []);
 
-  return { clickPoints, routeCoords, routeStatus, routeColor, handleMapClick, recalculateRoute, clearRoute };
+  return {
+    clickPoints,
+    routeCoords,
+    routeSegments,
+    routeStatus,
+    routeColor,
+    routeInfo,
+    handleMapClick,
+    recalculateRoute,
+    findNearest,
+    clearRoute,
+  };
 }

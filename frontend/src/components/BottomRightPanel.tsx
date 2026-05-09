@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { type NavTab } from './TopRightNav';
+import type { RouteInfo } from '../hooks/useRouting';
 
 export interface Report {
   id: string;
@@ -16,7 +17,19 @@ interface BottomRightPanelProps {
   isSettingLocation: boolean;
   onToggleSetLocation: () => void;
   currentPoint: [number, number] | null;
+  onFindNearest: (type: string) => void;
+  routeInfo: RouteInfo | null;
+  routeStatus: string;
+  routeColor: string;
+  hasStartPoint: boolean;
 }
+
+const RISK_COLORS: Record<string, string> = {
+  SAFE: '#4ade80',
+  MODERATE: '#ffd200',
+  HIGH: '#ff8800',
+  CRITICAL: '#ff3366',
+};
 
 const BottomRightPanel: React.FC<BottomRightPanelProps> = ({
   activeTab,
@@ -25,6 +38,11 @@ const BottomRightPanel: React.FC<BottomRightPanelProps> = ({
   isSettingLocation,
   onToggleSetLocation,
   currentPoint,
+  onFindNearest,
+  routeInfo,
+  routeStatus,
+  routeColor,
+  hasStartPoint,
 }) => {
   const [description, setDescription] = useState('');
   const [reportType, setReportType] = useState<'police' | 'hospital'>('police');
@@ -80,6 +98,105 @@ const BottomRightPanel: React.FC<BottomRightPanelProps> = ({
 
   return (
     <div className="bottom-right-container">
+      {/* Emergency Finder Section */}
+      <div className="reporter-panel user-finder-panel">
+        <div className="reporter-header">
+          <h3>🆘 Emergency Finder</h3>
+        </div>
+
+        {!hasStartPoint ? (
+          <div className="finder-hint">
+            <span className="finder-hint-icon">📍</span>
+            <span>Click anywhere on the map to set your location, then find the nearest facility.</span>
+          </div>
+        ) : (
+          <>
+            <div className="finder-hint active-hint">
+              <span className="finder-hint-icon">✅</span>
+              <span>Location set! Choose an emergency service below.</span>
+            </div>
+
+            <div className="finder-grid">
+              <button className="finder-btn hospital" onClick={() => onFindNearest('hospital')}>
+                <span className="finder-btn-icon">🏥</span>
+                <span className="finder-btn-label">Nearest Hospital</span>
+              </button>
+              <button className="finder-btn police" onClick={() => onFindNearest('police')}>
+                <span className="finder-btn-icon">🚔</span>
+                <span className="finder-btn-label">Nearest Police</span>
+              </button>
+              <button className="finder-btn fire" onClick={() => onFindNearest('fire')}>
+                <span className="finder-btn-icon">🚒</span>
+                <span className="finder-btn-label">Nearest Fire Stn</span>
+              </button>
+              <button className="finder-btn shelter" onClick={() => onFindNearest('shelter')}>
+                <span className="finder-btn-icon">🏠</span>
+                <span className="finder-btn-label">Nearest Shelter</span>
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Route Result */}
+        {routeInfo && (
+          <div className="finder-result">
+            <div className="finder-result-status" style={{ color: routeColor }}>
+              {routeStatus}
+            </div>
+            {routeInfo.facilityName && (
+              <div className="finder-result-name">{routeInfo.facilityName}</div>
+            )}
+            <div className="finder-result-stats">
+              <div className="finder-stat">
+                <span className="finder-stat-label">Distance</span>
+                <span className="finder-stat-value">{routeInfo.distanceKm} km</span>
+              </div>
+              <div className="finder-stat">
+                <span className="finder-stat-label">Max Depth</span>
+                <span className="finder-stat-value" style={{
+                  color: routeInfo.maxDepth > 5 ? '#ff3366' : routeInfo.maxDepth > 2 ? '#ff8800' : '#4ade80'
+                }}>
+                  {routeInfo.maxDepth} cm
+                </span>
+              </div>
+              <div className="finder-stat">
+                <span className="finder-stat-label">Risk</span>
+                <span className="finder-stat-value" style={{
+                  color: RISK_COLORS[routeInfo.riskLevel] || '#8b9bb4'
+                }}>
+                  {routeInfo.riskLevel}
+                </span>
+              </div>
+            </div>
+            {/* ETA */}
+            <div className="finder-eta-row">
+              <div className={`finder-eta-card ${routeInfo.eta.walk === null ? 'blocked' : ''}`}>
+                <span className="finder-eta-icon">🚶</span>
+                <span className="finder-eta-time">
+                  {routeInfo.eta.walk !== null ? (routeInfo.eta.walk >= 60 ? `${Math.floor(routeInfo.eta.walk / 60)}h ${routeInfo.eta.walk % 60}m` : `${routeInfo.eta.walk} min`) : '—'}
+                </span>
+                {routeInfo.eta.walk === null && <span className="eta-blocked">Flooded</span>}
+              </div>
+              <div className={`finder-eta-card ${routeInfo.eta.bike === null ? 'blocked' : ''}`}>
+                <span className="finder-eta-icon">🚴</span>
+                <span className="finder-eta-time">
+                  {routeInfo.eta.bike !== null ? (routeInfo.eta.bike >= 60 ? `${Math.floor(routeInfo.eta.bike / 60)}h ${routeInfo.eta.bike % 60}m` : `${routeInfo.eta.bike} min`) : '—'}
+                </span>
+                {routeInfo.eta.bike === null && <span className="eta-blocked">Flooded</span>}
+              </div>
+              <div className={`finder-eta-card ${routeInfo.eta.car === null ? 'blocked' : ''}`}>
+                <span className="finder-eta-icon">🚗</span>
+                <span className="finder-eta-time">
+                  {routeInfo.eta.car !== null ? (routeInfo.eta.car >= 60 ? `${Math.floor(routeInfo.eta.car / 60)}h ${routeInfo.eta.car % 60}m` : `${routeInfo.eta.car} min`) : '—'}
+                </span>
+                {routeInfo.eta.car === null && <span className="eta-blocked">Flooded</span>}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Report Form */}
       {isFormOpen && (
         <div className="reporter-panel">
           <div className="reporter-header">

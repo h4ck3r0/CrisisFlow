@@ -21,19 +21,19 @@ export default function Legend() {
       </div>
       <div className="legend">
         <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#ff4444' }} />
+          <span className="legend-icon">🏥</span>
           Hospital
         </div>
         <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#ff8800' }} />
+          <span className="legend-icon">🚒</span>
           Fire Stn
         </div>
         <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#4488ff' }} />
+          <span className="legend-icon">🚔</span>
           Police
         </div>
         <div className="legend-item">
-          <span className="legend-dot" style={{ background: '#44cc88' }} />
+          <span className="legend-icon">🏠</span>
           Shelter
         </div>
       </div>

@@ -66,6 +66,43 @@ body {
   border-radius: 4px;
 }
 
+/* Collapsible Sections */
+.panel-section {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 0;
+}
+
+.section-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 10px 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.section-toggle:hover {
+  color: #fff;
+}
+
+.section-chevron {
+  font-size: 12px;
+  opacity: 0.5;
+}
+
+.section-body {
+  padding-bottom: 4px;
+}
+
 h1 {
   font-family: 'Outfit', sans-serif;
   font-size: 24px;
@@ -129,6 +166,14 @@ h1 {
 
 .control-group {
   margin-bottom: 16px;
+}
+
+.cluster-row {
+  display: flex;
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
 }
 
 label {
@@ -421,6 +466,11 @@ input[type=range] {
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
+.legend-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
 .routing-section {
   margin-top: 12px;
   padding-top: 12px;
@@ -450,6 +500,300 @@ input[type=range] {
   border-radius: 6px;
   text-align: center;
   border: 1px solid var(--border);
+}
+
+.route-stats {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.route-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+}
+
+.route-stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.route-stat-value {
+  font-size: 13px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+}
+
+.nearest-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.nearest-btn {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.nearest-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.nearest-btn.hospital:hover { border-color: #ff4444; color: #ff6666; }
+.nearest-btn.police:hover { border-color: #4488ff; color: #66aaff; }
+.nearest-btn.shelter:hover { border-color: #44cc88; color: #66ddaa; }
+
+/* Route Stats Row (compact chips) */
+.route-stats-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.route-stat-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.chip-value {
+  font-size: 14px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: #fff;
+}
+
+.chip-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.route-destination {
+  font-size: 12px;
+  color: var(--primary);
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+/* ETA Cards */
+.eta-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.eta-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: 0.2s;
+}
+
+.eta-card.blocked {
+  opacity: 0.4;
+  border-color: rgba(255, 51, 102, 0.3);
+}
+
+.eta-icon {
+  font-size: 16px;
+}
+
+.eta-time {
+  font-size: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: #fff;
+}
+
+.eta-blocked {
+  font-size: 8px;
+  color: var(--danger);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Finder ETA (User Dashboard) */
+.finder-eta-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.finder-eta-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.finder-eta-card.blocked {
+  opacity: 0.35;
+  border-color: rgba(255, 51, 102, 0.25);
+}
+
+.finder-eta-icon {
+  font-size: 14px;
+}
+
+.finder-eta-time {
+  font-size: 11px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Emergency Finder (User Dashboard) */
+.user-finder-panel {
+  margin-bottom: 10px;
+}
+
+.finder-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(255, 200, 0, 0.06);
+  border: 1px solid rgba(255, 200, 0, 0.2);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #ffd200;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.finder-hint.active-hint {
+  background: rgba(74, 222, 128, 0.06);
+  border-color: rgba(74, 222, 128, 0.2);
+  color: #4ade80;
+}
+
+.finder-hint-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.finder-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.finder-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.finder-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.finder-btn.hospital:hover { border-color: #ff4444; }
+.finder-btn.police:hover { border-color: #4488ff; }
+.finder-btn.fire:hover { border-color: #ff8800; }
+.finder-btn.shelter:hover { border-color: #44cc88; }
+
+.finder-btn-icon {
+  font-size: 24px;
+}
+
+.finder-btn-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.finder-result {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 8px;
+}
+
+.finder-result-status {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.finder-result-name {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.finder-result-stats {
+  display: flex;
+  gap: 12px;
+}
+
+.finder-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.finder-stat-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.finder-stat-value {
+  font-size: 14px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: #fff;
 }
 
 .maplibregl-ctrl-bottom-right,

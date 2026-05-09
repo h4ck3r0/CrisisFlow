@@ -1,12 +1,19 @@
 import { useMemo } from 'react';
 import DeckGL from '@deck.gl/react';
 import { Map } from 'react-map-gl/maplibre';
-import { GeoJsonLayer, ScatterplotLayer, PathLayer } from '@deck.gl/layers';
+import { GeoJsonLayer, ScatterplotLayer, PathLayer, TextLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 import { LightingEffect, AmbientLight, DirectionalLight } from '@deck.gl/core';
 import { INFRA_COLORS, FLOOD_COLOR_RANGE } from '../constants';
-import type { FloodPoint, EmergencyFacility, ViewState } from '../types';
+import type { FloodPoint, EmergencyFacility, ViewState, RouteSegment } from '../types';
 import 'maplibre-gl/dist/maplibre-gl.css';
+
+const INFRA_ICONS: Record<string, string> = {
+  hospital: '🏥',
+  fire: '🚒',
+  police: '🚔',
+  shelter: '🏠',
+};
 
 interface MapViewProps {
   viewState: ViewState;
@@ -16,6 +23,7 @@ interface MapViewProps {
   emergencyData: EmergencyFacility[];
   clickPoints: [number, number][];
   routeCoords: number[][] | null;
+  routeSegments: RouteSegment[];
   onMapClick: (coordinate: [number, number]) => void;
   currentPoint: [number, number] | null;
 }
@@ -51,6 +59,7 @@ export default function MapView({
   emergencyData,
   clickPoints,
   routeCoords,
+  routeSegments,
   onMapClick,
   currentPoint,
 }: MapViewProps) {
@@ -100,11 +109,11 @@ export default function MapView({
         data: activeFloodPoints,
         getPosition: (d: FloodPoint) => [d.lon, d.lat],
         getWeight: (d: FloodPoint) => Math.max(d.depth, 0),
-        radiusPixels: 35,
-        intensity: 1.5,
-        threshold: 0.03,
+        radiusPixels: 25,
+        intensity: 1.2,
+        threshold: 0.08,
         colorRange: FLOOD_COLOR_RANGE,
-        opacity: 0.75,
+        opacity: 0.7,
         pickable: false,
       }),
 
@@ -127,23 +136,40 @@ export default function MapView({
       }),
 
       new ScatterplotLayer({
-        id: 'emergency-markers',
+        id: 'emergency-bg',
         data: emergencyData,
-        pickable: true,
-        opacity: 1,
+        pickable: false,
+        opacity: 0.9,
         stroked: true,
         filled: true,
-        radiusMinPixels: 8,
-        radiusMaxPixels: 14,
+        radiusMinPixels: 16,
+        radiusMaxPixels: 22,
         lineWidthMinPixels: 2,
         getPosition: (d: EmergencyFacility) => [d.lon, d.lat],
-        getRadius: 40,
+        getRadius: 60,
         getFillColor: (d: EmergencyFacility) => {
+          return d.accessible !== false ? [15, 20, 35, 220] : [60, 15, 20, 220];
+        },
+        getLineColor: (d: EmergencyFacility) => {
           const base = INFRA_COLORS[d.type] || [255, 255, 255];
           return d.accessible !== false ? [...base, 255] : [...base, 100];
         },
-        getLineColor: (d: EmergencyFacility) =>
-          d.accessible !== false ? [255, 255, 255, 200] : [255, 50, 50, 255],
+      }),
+
+      new TextLayer({
+        id: 'emergency-icons',
+        data: emergencyData,
+        pickable: true,
+        getPosition: (d: EmergencyFacility) => [d.lon, d.lat],
+        getText: (d: EmergencyFacility) => INFRA_ICONS[d.type] || '📍',
+        getSize: 20,
+        getAngle: 0,
+        getTextAnchor: 'middle',
+        getAlignmentBaseline: 'center',
+        getPixelOffset: [0, 0],
+        fontFamily: 'Arial, sans-serif',
+        characterSet: 'auto',
+        billboard: true,
       }),
 
       new ScatterplotLayer({
@@ -170,19 +196,19 @@ export default function MapView({
         widthMinPixels: 14,
         widthMaxPixels: 20,
         getPath: (d: { path: number[][] }) => d.path,
-        getColor: [0, 180, 255, 50],
+        getColor: [0, 180, 255, 40],
         getWidth: 14,
         rounded: true,
       }),
 
       new PathLayer({
-        id: 'ai-route',
-        data: routeCoords ? [{ path: routeCoords }] : [],
+        id: 'ai-route-segments',
+        data: routeSegments,
         pickable: false,
         widthMinPixels: 5,
         widthMaxPixels: 8,
-        getPath: (d: { path: number[][] }) => d.path,
-        getColor: [0, 180, 255, 240],
+        getPath: (d: RouteSegment) => d.path,
+        getColor: (d: RouteSegment) => d.color,
         getWidth: 5,
         rounded: true,
       }),
@@ -205,7 +231,7 @@ export default function MapView({
     ];
 
     return allLayers;
-  }, [is3D, activeFloodPoints, emergencyData, clickPoints, routeCoords, currentPoint]);
+  }, [is3D, activeFloodPoints, emergencyData, clickPoints, routeCoords, routeSegments, currentPoint]);
 
   const effects = useMemo(() => (is3D ? [lightingEffect] : []), [is3D]);
 

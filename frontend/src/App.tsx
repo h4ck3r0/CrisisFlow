@@ -7,6 +7,7 @@ import BottomRightPanel, { type Report } from './components/BottomRightPanel';
 import { useFloodSimulation } from './hooks/useFloodSimulation';
 import { useWeather } from './hooks/useWeather';
 import { useRouting } from './hooks/useRouting';
+import { useFloodClustering } from './hooks/useFloodClustering';
 import {
   INITIAL_VIEW_STATE,
   VIEW_STATE_2D,
@@ -37,6 +38,8 @@ function App() {
   const [is3D, setIs3D] = useState(false);
   const [intensity, setIntensity] = useState(0.5);
   const [currentTimestep, setCurrentTimestep] = useState(-1);
+  const [depthThreshold, setDepthThreshold] = useState(1.0);
+  const [clusterEnabled, setClusterEnabled] = useState(true);
 
   // New states for User/Gov/Police/Hospital
   const [activeTab, setActiveTab] = useState<NavTab>('user');
@@ -55,8 +58,10 @@ function App() {
     fetchWeather,
     toggleAutoRefresh,
   } = useWeather();
-  const { clickPoints, routeCoords, routeStatus, routeColor, handleMapClick, recalculateRoute, clearRoute } =
-    useRouting();
+  const {
+    clickPoints, routeCoords, routeSegments, routeStatus, routeColor,
+    routeInfo, handleMapClick, recalculateRoute, findNearest, clearRoute,
+  } = useRouting();
 
   const activeFloodPoints = useMemo((): FloodPoint[] => {
     if (currentTimestep === -2) return [];
@@ -67,6 +72,8 @@ function App() {
       depth: floodTimeline[currentTimestep]?.[i] ?? 0,
     }));
   }, [floodPoints, floodTimeline, currentTimestep]);
+
+  const clusteredPoints = useFloodClustering(activeFloodPoints, depthThreshold, clusterEnabled);
 
   const emergencyData = useMemo(() => {
     const active = activeFloodPoints;
@@ -130,19 +137,34 @@ function App() {
       if (newIntensity <= 0.05) {
         clearSimulation();
         setCurrentTimestep(-2);
+      } else {
+        setCurrentTimestep(0);
+        await simulate(newIntensity);
+      }
+      if (clickPoints.length === 2) {
+        recalculateRoute(newIntensity);
       }
     }
-  }, [fetchWeather, clearSimulation]);
+  }, [fetchWeather, clearSimulation, simulate, clickPoints, recalculateRoute]);
 
   const handleAutoRefresh = useCallback(() => {
     toggleAutoRefresh(async () => {
       const newIntensity = await fetchWeather();
       if (newIntensity !== null) {
         setIntensity(newIntensity);
-        await simulate(newIntensity);
+        if (newIntensity <= 0.05) {
+          clearSimulation();
+          setCurrentTimestep(-2);
+        } else {
+          setCurrentTimestep(0);
+          await simulate(newIntensity);
+        }
+        if (clickPoints.length === 2) {
+          recalculateRoute(newIntensity);
+        }
       }
     });
-  }, [toggleAutoRefresh, fetchWeather, simulate]);
+  }, [toggleAutoRefresh, fetchWeather, clearSimulation, simulate, clickPoints, recalculateRoute]);
 
   const onMapClick = useCallback(
     (coordinate: [number, number]) => {
@@ -182,16 +204,17 @@ function App() {
         viewState={viewState}
         onViewStateChange={setViewState}
         is3D={is3D}
-        activeFloodPoints={activeFloodPoints}
+        activeFloodPoints={clusteredPoints}
         emergencyData={emergencyData}
         clickPoints={clickPoints}
         routeCoords={routeCoords}
+        routeSegments={routeSegments}
         onMapClick={onMapClick}
         currentPoint={currentPoint}
       />
       <RainEffect
         intensity={intensity}
-        active={activeFloodPoints.length > 0}
+        active={clusteredPoints.length > 0}
       />
       {activeTab === 'gov' && (
         <ControlPanel
@@ -219,6 +242,17 @@ function App() {
           routeColor={routeColor}
           showClearRoute={clickPoints.length > 0}
           onClearRoute={clearRoute}
+          routeInfo={routeInfo}
+          onFindNearest={(type: string) => {
+            if (clickPoints.length > 0) {
+              findNearest(clickPoints[0][1], clickPoints[0][0], type, intensity);
+            }
+          }}
+          hasStartPoint={clickPoints.length > 0}
+          depthThreshold={depthThreshold}
+          onDepthThresholdChange={setDepthThreshold}
+          clusterEnabled={clusterEnabled}
+          onClusterToggle={() => setClusterEnabled(!clusterEnabled)}
         />
       )}
 
@@ -231,6 +265,17 @@ function App() {
         isSettingLocation={isSettingLocation}
         onToggleSetLocation={() => setIsSettingLocation(!isSettingLocation)}
         currentPoint={currentPoint}
+        onFindNearest={(type: string) => {
+          if (clickPoints.length > 0) {
+            findNearest(clickPoints[0][1], clickPoints[0][0], type, intensity);
+          } else if (currentPoint) {
+            findNearest(currentPoint[1], currentPoint[0], type, intensity);
+          }
+        }}
+        routeInfo={routeInfo}
+        routeStatus={routeStatus}
+        routeColor={routeColor}
+        hasStartPoint={clickPoints.length > 0 || currentPoint !== null}
       />
 
       {alert && <div className="alert-overlay">{alert}</div>}

@@ -30,9 +30,27 @@ export interface WeatherResult {
   status: 'live' | 'fallback';
 }
 
+export interface RouteSegment {
+  path: number[][];
+  depth: number;
+  color: [number, number, number, number];
+}
+
+export interface RouteETA {
+  walk: number | null;
+  bike: number | null;
+  car: number | null;
+}
+
 export interface RouteResult {
   status: 'success' | 'error';
   path?: number[][];
+  segments?: RouteSegment[];
+  distance_km?: number;
+  max_depth?: number;
+  risk_level?: 'SAFE' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+  facility_name?: string;
+  eta?: RouteETA;
   message?: string;
 }
 

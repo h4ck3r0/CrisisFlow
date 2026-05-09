@@ -116,11 +116,119 @@ def get_weather():
     except Exception:
         return {"rain_mm": 0, "intensity": 0.1, "status": "fallback"}
 
+import math
+
+last_simulation_cache = {"intensity": None, "depth_lookup": {}}
+
+def get_depth_lookup(intensity: float):
+    cached = last_simulation_cache
+    if cached["intensity"] == intensity and cached["depth_lookup"]:
+        return cached["depth_lookup"]
+    result = simulate_storm(StormRequest(intensity=intensity))
+    flood_list = result["points"]
+    lookup = {nodes[i]: flood_list[i]["depth"] for i in range(len(flood_list))}
+    last_simulation_cache["intensity"] = intensity
+    last_simulation_cache["depth_lookup"] = lookup
+    return lookup
+
+def compute_flood_weight(length: float, depth_u: float, depth_v: float) -> float:
+    avg_depth = (depth_u + depth_v) / 2.0
+    if avg_depth > 12.0:
+        return length + 999999.0
+    penalty = length * (math.exp(avg_depth / 3.0) - 1.0)
+    return length + penalty
+
+def get_segment_color(avg_depth: float):
+    if avg_depth > 15:
+        return [255, 30, 50, 255]
+    elif avg_depth > 8:
+        return [255, 140, 0, 255]
+    elif avg_depth > 4:
+        return [255, 220, 0, 240]
+    else:
+        return [0, 220, 180, 240]
+
+def build_route_response(path, depth_lookup, G_routing):
+    segments = []
+    total_distance = 0.0
+    max_depth_on_route = 0.0
+
+    for i in range(len(path) - 1):
+        u, v = path[i], path[i + 1]
+        edge_keys = G_routing[u][v]
+        best_edge = min(edge_keys.values(), key=lambda d: d.get('flood_weight', float('inf')))
+        seg_length = float(best_edge.get('length', 0.0))
+        total_distance += seg_length
+
+        d_u = depth_lookup.get(u, 0.0)
+        d_v = depth_lookup.get(v, 0.0)
+        avg_depth = (d_u + d_v) / 2.0
+        max_depth_on_route = max(max_depth_on_route, avg_depth)
+
+        if 'geometry' in best_edge:
+            line_coords = list(best_edge['geometry'].coords)
+            start_node = (float(G.nodes[u]['x']), float(G.nodes[u]['y']))
+            first_geom = (line_coords[0][0], line_coords[0][1])
+            if abs(start_node[0] - first_geom[0]) + abs(start_node[1] - first_geom[1]) > 0.0001:
+                line_coords = line_coords[::-1]
+            coords = [[float(c[0]), float(c[1])] for c in line_coords]
+        else:
+            coords = [
+                [float(G.nodes[u]['x']), float(G.nodes[u]['y'])],
+                [float(G.nodes[v]['x']), float(G.nodes[v]['y'])]
+            ]
+
+        segments.append({
+            "path": coords,
+            "depth": round(avg_depth, 2),
+            "color": get_segment_color(avg_depth)
+        })
+
+    if max_depth_on_route > 15:
+        risk = "CRITICAL"
+    elif max_depth_on_route > 8:
+        risk = "HIGH"
+    elif max_depth_on_route > 4:
+        risk = "MODERATE"
+    else:
+        risk = "SAFE"
+
+    full_path = []
+    for i, seg in enumerate(segments):
+        if i == 0:
+            full_path.extend(seg["path"])
+        else:
+            full_path.extend(seg["path"][1:])
+
+    dist_km = round(total_distance / 1000.0, 2)
+
+    def compute_eta(base_speed_kmh, max_passable_depth):
+        if max_depth_on_route > max_passable_depth:
+            return None
+        flood_factor = max(1.0, 1.0 + (max_depth_on_route / max_passable_depth) * 2.0)
+        effective_speed = base_speed_kmh / flood_factor
+        time_min = (dist_km / effective_speed) * 60
+        return round(time_min)
+
+    eta = {
+        "walk": compute_eta(5.0, 30.0),
+        "bike": compute_eta(15.0, 8.0),
+        "car": compute_eta(30.0, 20.0),
+    }
+
+    return {
+        "status": "success",
+        "path": full_path,
+        "segments": segments,
+        "distance_km": dist_km,
+        "max_depth": round(max_depth_on_route, 1),
+        "risk_level": risk,
+        "eta": eta,
+    }
+
 @app.post("/route")
 def get_route(req: RouteRequest):
-    result = simulate_storm(StormRequest(intensity=req.intensity))
-    flood_list = result["points"]
-    depth_lookup = {nodes[i]: flood_list[i]["depth"] for i in range(len(flood_list))}
+    depth_lookup = get_depth_lookup(req.intensity)
 
     orig = ox.distance.nearest_nodes(G, req.start_lon, req.start_lat)
     dest = ox.distance.nearest_nodes(G, req.end_lon, req.end_lat)
@@ -128,40 +236,93 @@ def get_route(req: RouteRequest):
     G_routing = G.copy()
     for u, v, k, edata in G_routing.edges(keys=True, data=True):
         length = float(edata.get('length', 1.0))
-        depth = depth_lookup.get(v, 0.0)
-        if depth > 10.0:
-            penalty = 999999.0
-        else:
-            penalty = length * (depth / 2.0)
-        edata['flood_weight'] = length + penalty
+        d_u = depth_lookup.get(u, 0.0)
+        d_v = depth_lookup.get(v, 0.0)
+        edata['flood_weight'] = compute_flood_weight(length, d_u, d_v)
 
     try:
         path = nx.dijkstra_path(G_routing, orig, dest, weight='flood_weight')
-        coords = []
-        for i in range(len(path) - 1):
-            u, v = path[i], path[i + 1]
-            edge_keys = G_routing[u][v]
-            best_edge = min(edge_keys.values(), key=lambda d: d.get('flood_weight', float('inf')))
-            if 'geometry' in best_edge:
-                line_coords = list(best_edge['geometry'].coords)
-                start_node = (float(G.nodes[u]['x']), float(G.nodes[u]['y']))
-                first_geom = (line_coords[0][0], line_coords[0][1])
-                if abs(start_node[0] - first_geom[0]) + abs(start_node[1] - first_geom[1]) > 0.0001:
-                    line_coords = line_coords[::-1]
-                segment = [[float(c[0]), float(c[1])] for c in line_coords]
-            else:
-                segment = [
-                    [float(G.nodes[u]['x']), float(G.nodes[u]['y'])],
-                    [float(G.nodes[v]['x']), float(G.nodes[v]['y'])]
-                ]
-            if i == 0:
-                coords.extend(segment)
-            else:
-                coords.extend(segment[1:])
-        return {"status": "success", "path": coords}
+        return build_route_response(path, depth_lookup, G_routing)
     except nx.NetworkXNoPath:
         return {"status": "error", "message": "No safe path found."}
+
+class NearestRequest(BaseModel):
+    lat: float
+    lon: float
+    facility_type: str
+    intensity: float
+
+FACILITY_COORDS = {
+    "hospital": [
+        (12.9199685, 77.6652549, "Manipal Hospitals"),
+        (12.9305937, 77.6186159, "St. Johns Emergency Ward"),
+        (12.9338175, 77.6201615, "Apollo Spectra Hospitals"),
+        (12.9166101, 77.6450517, "Phoenix Hospital"),
+        (12.9202359, 77.6674739, "Rainbow Childrens Hospital"),
+        (12.9587074, 77.6490296, "Manipal Hospital Bengaluru"),
+        (12.9191928, 77.6381223, "Greenview Hospital"),
+        (12.9503234, 77.6162619, "Govt Primary Health Centre"),
+        (12.9102142, 77.6244654, "Roopena Agrahara Govt Hospital"),
+        (12.9343279, 77.6228848, "HCG Koramangala"),
+    ],
+    "police": [
+        (12.9201775, 77.6513034, "HSR Police Station"),
+        (12.9410977, 77.6214106, "Koramangala Police Station"),
+        (12.9518683, 77.6223510, "Viveknagar Police Station"),
+        (12.9190149, 77.6679644, "Bellanduru Police Station"),
+        (12.9210124, 77.6206703, "Madiwala Traffic Police"),
+    ],
+    "fire": [
+        (12.9168126, 77.6738567, "Sarjapura Road Fire Station"),
+    ],
+    "shelter": [
+        (12.9215585, 77.6441635, "HSR Layout Shelter"),
+        (12.9110130, 77.6411318, "Agara Shelter A"),
+        (12.9111180, 77.6402540, "Agara Shelter B"),
+        (12.9190637, 77.6387847, "Iblur Shelter"),
+    ],
+}
+
+@app.post("/route/nearest")
+def get_nearest_route(req: NearestRequest):
+    facilities = FACILITY_COORDS.get(req.facility_type, FACILITY_COORDS["hospital"])
+    depth_lookup = get_depth_lookup(req.intensity)
+
+    best_route = None
+    best_name = ""
+
+    for f_lat, f_lon, f_name in facilities:
+        f_depth = 0.0
+        nearest_f_node = ox.distance.nearest_nodes(G, f_lon, f_lat)
+        f_depth = depth_lookup.get(nearest_f_node, 0.0)
+        if f_depth > 10:
+            continue
+
+        orig = ox.distance.nearest_nodes(G, req.lon, req.lat)
+        dest = nearest_f_node
+
+        G_routing = G.copy()
+        for u, v, k, edata in G_routing.edges(keys=True, data=True):
+            length = float(edata.get('length', 1.0))
+            d_u = depth_lookup.get(u, 0.0)
+            d_v = depth_lookup.get(v, 0.0)
+            edata['flood_weight'] = compute_flood_weight(length, d_u, d_v)
+
+        try:
+            path = nx.dijkstra_path(G_routing, orig, dest, weight='flood_weight')
+            route = build_route_response(path, depth_lookup, G_routing)
+            if best_route is None or route["distance_km"] < best_route["distance_km"]:
+                best_route = route
+                best_name = f_name
+        except nx.NetworkXNoPath:
+            continue
+
+    if best_route:
+        best_route["facility_name"] = best_name
+        return best_route
+    return {"status": "error", "message": f"No accessible {req.facility_type} found."}
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
