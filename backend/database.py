@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+MONGODB_URL = os.getenv("DATABASE_URL") or os.getenv("MONGODB_URL") or "mongodb://localhost:27017"
 DATABASE_NAME = os.getenv("DATABASE_NAME", "crisisflow")
 
 client: AsyncIOMotorClient = None  # type: ignore
