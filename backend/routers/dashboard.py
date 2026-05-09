@@ -22,9 +22,10 @@ async def government_dashboard(db: AsyncIOMotorDatabase = Depends(get_db)):
     resources_f = db.resources.find(ND).to_list(100)
     hospitals_f = db.hospital_capacity.find(ND).to_list(20)
     reports_f = db.citizen_reports.find({"report_to": {"$in": ["government", None]}, **ND}).sort("reported_at", -1).to_list(20)
+    blocks_f = db.road_blocks.find({**ND, "status": "active"}).to_list(100)
 
-    zones, dispatches, alerts, triage, resources, hospitals, reports = await asyncio.gather(
-        zones_f, dispatches_f, alerts_f, triage_f, resources_f, hospitals_f, reports_f
+    zones, dispatches, alerts, triage, resources, hospitals, reports, blocks = await asyncio.gather(
+        zones_f, dispatches_f, alerts_f, triage_f, resources_f, hospitals_f, reports_f, blocks_f
     )
     return {
         "zones": _clean(zones),
@@ -34,6 +35,7 @@ async def government_dashboard(db: AsyncIOMotorDatabase = Depends(get_db)):
         "resources": _clean(resources),
         "hospitals": _clean(hospitals),
         "recent_reports": _clean(reports),
+        "active_road_blocks": _clean(blocks),
         "summary": {
             "total_zones": len(zones),
             "critical_zones": sum(1 for z in zones if z.get("risk_level") == "critical"),
@@ -78,9 +80,10 @@ async def hospital_dashboard(db: AsyncIOMotorDatabase = Depends(get_db)):
     incidents_f = db.incidents.find({**ND, "incident_type": "medical", "status": {"$ne": "resolved"}}).to_list(50)
     ambulances_f = db.resources.find({**ND, "resource_type": "ambulance"}).to_list(50)
     reports_f = db.citizen_reports.find({"report_to": "hospital", **ND}).sort("reported_at", -1).to_list(20)
+    blocks_f = db.road_blocks.find({**ND, "status": "active"}).to_list(100)
 
-    hospitals, incidents, ambulances, reports = await asyncio.gather(
-        hospitals_f, incidents_f, ambulances_f, reports_f
+    hospitals, incidents, ambulances, reports, blocks = await asyncio.gather(
+        hospitals_f, incidents_f, ambulances_f, reports_f, blocks_f
     )
     total_beds = sum(h.get("general_beds_available", 0) + h.get("emergency_beds_available", 0) for h in hospitals)
     return {
@@ -88,6 +91,7 @@ async def hospital_dashboard(db: AsyncIOMotorDatabase = Depends(get_db)):
         "incoming_medical_incidents": _clean(incidents),
         "ambulances": _clean(ambulances),
         "recent_reports": _clean(reports),
+        "active_road_blocks": _clean(blocks),
         "summary": {
             "total_hospitals": len(hospitals),
             "total_beds_available": total_beds,
@@ -107,12 +111,13 @@ async def fire_dashboard(db: AsyncIOMotorDatabase = Depends(get_db)):
         **ND, "resource_type": {"$in": ["fire_engine", "rescue_vehicle", "pump"]},
         "status": {"$nin": ["complete", "cancelled"]},
     }).sort([("dispatched_at", -1), ("_id", -1)]).to_list(100)
+    blocks_f = db.road_blocks.find({**ND, "status": "active"}).to_list(100)
 
-    incidents, fire_res, dispatches = await asyncio.gather(fire_incidents_f, fire_res_f, dispatches_f)
+    incidents, fire_res, dispatches, blocks = await asyncio.gather(fire_incidents_f, fire_res_f, dispatches_f, blocks_f)
     return {
-        "fire_incidents": _clean(incidents),
         "fire_resources": _clean(fire_res),
         "active_dispatches": _clean(dispatches),
+        "active_road_blocks": _clean(blocks),
         "summary": {
             "active_incidents": len(incidents),
             "available_engines": sum(1 for r in fire_res if r.get("status") == "available"),

@@ -14,12 +14,15 @@ interface RolePanelProps {
   routeColor?: string;
   hasStartPoint?: boolean;
   onZoneClick?: (lat: number, lng: number) => void;
+  barricadeMode?: boolean;
+  onToggleBarricade?: () => void;
+  onDeleteBarricade?: (id: string) => void;
 }
-
 export default function RolePanel({
   role, data, onRefresh,
   currentPoint, onFindNearest, routeInfo, routeStatus, routeColor, hasStartPoint,
   onZoneClick,
+  barricadeMode, onToggleBarricade, onDeleteBarricade,
 }: RolePanelProps) {
   const [currentTab, setCurrentTab] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
@@ -78,6 +81,9 @@ export default function RolePanel({
               routeColor={routeColor}
               hasStartPoint={hasStartPoint}
               onZoneClick={onZoneClick}
+              barricadeMode={barricadeMode}
+              onToggleBarricade={onToggleBarricade}
+              onDeleteBarricade={onDeleteBarricade}
             />
           </div>
         </div>

@@ -26,6 +26,7 @@ function App() {
   const [currentTimestep, setCurrentTimestep] = useState(-1);
   const [depthThreshold, setDepthThreshold] = useState(1.0);
   const [clusterEnabled, setClusterEnabled] = useState(true);
+  const [barricadeMode, setBarricadeMode] = useState(false);
 
   // Role state
   const [currentRole, setCurrentRole] = useState<RoleId>('gov');
@@ -49,7 +50,7 @@ function App() {
   } = useRouting();
 
   // MongoDB dashboard data
-  const { data: dashboardData, fetchDashboard, runTriage } = useDashboard();
+  const { data: dashboardData, fetchDashboard, runTriage, createBarricade, deleteBarricade } = useDashboard();
 
   // Role change handler
   const handleRoleChange = useCallback((role: RoleId) => {
@@ -176,11 +177,21 @@ function App() {
   }, [toggleAutoRefresh, fetchWeather, clearSimulation, simulate, routeCoords, recalculateRoute, fetchDashboard, currentRole]);
 
   const onMapClick = useCallback(
-    (coordinate: [number, number]) => {
+    async (coordinate: [number, number]) => {
+      if (barricadeMode) {
+        setAlert("🔨 Snapping barricade to road node...");
+        const res = await createBarricade(coordinate[1], coordinate[0]);
+        if (res) {
+          setAlert(`🚧 Barricade active: ${res.block_id}`);
+          setTimeout(() => setAlert(null), 3000);
+          setBarricadeMode(false);
+        }
+        return;
+      }
       setCurrentPoint(coordinate);
       handleMapClick(coordinate, intensity);
     },
-    [handleMapClick, intensity]
+    [handleMapClick, intensity, barricadeMode, createBarricade]
   );
 
   const handleFindNearest = useCallback((type: string) => {
@@ -197,6 +208,15 @@ function App() {
       transitionDuration: 1000,
     }));
   }, []);
+
+  const handleDeleteBarricade = useCallback(async (id: string) => {
+    const res = await deleteBarricade(id);
+    if (res) {
+      setAlert("♻️ Road cleared. Recalculating routes...");
+      recalculateRoute(intensity);
+      setTimeout(() => setAlert(null), 2000);
+    }
+  }, [deleteBarricade, recalculateRoute, intensity]);
 
   const handlePrimaryAction = useCallback(async () => {
     if (currentRole === 'gov') {
@@ -234,6 +254,7 @@ function App() {
             routeSegments={routeSegments}
             onMapClick={onMapClick}
             currentPoint={currentPoint}
+            roadBlocks={dashboardData?.active_road_blocks || dashboardData?.road_blocks || []}
           />
           <RainEffect intensity={intensity} active={intensity > 0.05} />
 
@@ -298,6 +319,9 @@ function App() {
           routeColor={routeColor}
           hasStartPoint={clickPoints.length > 0 || currentPoint !== null}
           onZoneClick={handleZoneClick}
+          barricadeMode={barricadeMode}
+          onToggleBarricade={() => setBarricadeMode(!barricadeMode)}
+          onDeleteBarricade={handleDeleteBarricade}
         />
       </div>
 

@@ -163,6 +163,36 @@ export function useDashboard() {
     }
   }, []);
 
+  const createBarricade = useCallback(async (lat: number, lon: number) => {
+    try {
+      const res = await fetch(`${API_URL}/barricade`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lon }),
+      });
+      const json = await res.json();
+      await fetchDashboard('police');
+      return json;
+    } catch (e) {
+      console.error('Barricade creation failed:', e);
+      return null;
+    }
+  }, [fetchDashboard]);
+
+  const deleteBarricade = useCallback(async (blockId: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/road-blocks/${blockId}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      await fetchDashboard('police');
+      return json;
+    } catch (e) {
+      console.error('Barricade deletion failed:', e);
+      return null;
+    }
+  }, [fetchDashboard]);
+
   // Auto-fetch government dashboard on mount
   useEffect(() => {
     fetchDashboard('gov');
@@ -175,5 +205,7 @@ export function useDashboard() {
     fetchDashboard,
     submitCitizenReport,
     runTriage,
+    createBarricade,
+    deleteBarricade,
   };
 }

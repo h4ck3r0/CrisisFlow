@@ -15,6 +15,9 @@ class RoadBlockCreate(BaseModel):
     road_name: str
     zone_id: str
     reason: str
+    lat: float
+    lon: float
+    node_id: Optional[int] = None
     depth_at_block: float = 0.0
     blocked_by: str = "system"
     status: RoadBlockStatus = RoadBlockStatus.active
