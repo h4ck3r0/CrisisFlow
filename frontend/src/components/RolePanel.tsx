@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { ROLES, type RoleId } from '../constants/roles';
 import RolePanelContent from './RolePanelContent';
 import type { RouteInfo } from '../hooks/useRouting';
+import type { DashboardData } from '../hooks/useDashboard';
 
 interface RolePanelProps {
   role: RoleId;
-  data: any;
+  data: DashboardData | null;
   onRefresh: () => void;
   currentPoint?: [number, number] | null;
   onFindNearest?: (type: string) => void;
@@ -29,7 +30,9 @@ export default function RolePanel({
   const [collapsed, setCollapsed] = useState(false);
   const cfg = ROLES[role];
 
-  useEffect(() => { setCurrentTab(0); }, [role]);
+  useEffect(() => { 
+    Promise.resolve().then(() => setCurrentTab(0));
+  }, [role]);
 
   const tabs = cfg.tabs;
   const activeTab = currentTab >= tabs.length ? 0 : currentTab;

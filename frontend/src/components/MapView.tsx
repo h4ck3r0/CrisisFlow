@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import DeckGL from '@deck.gl/react';
 import { Map } from 'react-map-gl/maplibre';
-import { GeoJsonLayer, ScatterplotLayer, PathLayer, TextLayer } from '@deck.gl/layers';
+import { GeoJsonLayer, ScatterplotLayer, PathLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 import { LightingEffect, AmbientLight, DirectionalLight } from '@deck.gl/core';
 import { INFRA_COLORS, FLOOD_COLOR_RANGE, API_URL } from '../constants';
@@ -9,6 +9,7 @@ import type { FloodPoint, EmergencyFacility, ViewState, RouteSegment } from '../
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import { IconLayer } from '@deck.gl/layers';
+import type { DashboardRoadBlock } from '../hooks/useDashboard';
 
 const LUCIDE_ICONS: Record<string, string> = {
   hospital: `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/></svg>')}`,
@@ -28,7 +29,7 @@ interface MapViewProps {
   routeSegments: RouteSegment[];
   onMapClick: (coordinate: [number, number]) => void;
   currentPoint: [number, number] | null;
-  roadBlocks: any[];
+  roadBlocks: DashboardRoadBlock[];
 }
 
 const ambientLight = new AmbientLight({
@@ -196,8 +197,7 @@ export default function MapView({
         pickable: false,
         widthMinPixels: 14,
         widthMaxPixels: 20,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getPath: (d: any) => d.path,
+        getPath: (d: { path: number[][] }) => d.path as [number, number][],
         getColor: [0, 180, 255, 40],
         getWidth: 14,
         jointRounded: true,
@@ -210,8 +210,7 @@ export default function MapView({
         pickable: false,
         widthMinPixels: 5,
         widthMaxPixels: 8,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getPath: (d: RouteSegment) => d.path as any,
+        getPath: (d: RouteSegment) => d.path as [number, number][],
         getColor: (d: RouteSegment) => d.color,
         getWidth: 5,
         jointRounded: true,
@@ -238,7 +237,7 @@ export default function MapView({
         id: 'road-block-bg',
         data: roadBlocks,
         pickable: false,
-        getPosition: (d: any) => [d.lon, d.lat],
+        getPosition: (d: DashboardRoadBlock) => [d.lng || 0, d.lat || 0],
         getRadius: 20,
         getFillColor: [0, 0, 0, 200],
         getLineColor: [245, 158, 11, 255],
@@ -249,7 +248,7 @@ export default function MapView({
         id: 'road-blocks',
         data: roadBlocks,
         pickable: true,
-        getPosition: (d: any) => [d.lon, d.lat],
+        getPosition: (d: DashboardRoadBlock) => [d.lng || 0, d.lat || 0],
         getIcon: () => ({
           url: `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M17 3v3"/><path d="M7 3v3"/><path d="M10 14 2.3 6.3"/><path d="m14 6 7.7 7.7"/><path d="m8 6 8 8"/></svg>')}`,
           width: 24,
@@ -343,12 +342,11 @@ export default function MapView({
     <DeckGL
       viewState={viewState}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onViewStateChange={(params: any) => onViewStateChange(params.viewState)}
+      onViewStateChange={(params: any) => onViewStateChange(params.viewState as ViewState)}
       controller={true}
       layers={layers}
       effects={effects}
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      onClick={(info: any) => {
+      onClick={(info: { object?: Record<string, unknown>; coordinate?: number[] }) => {
         if (info.object && typeof info.object.lon === 'number' && typeof info.object.lat === 'number') {
           onMapClick([info.object.lon, info.object.lat]);
         } else if (info.coordinate) {

@@ -3,11 +3,21 @@ import type { RoleId } from '../constants/roles';
 import { riskColor, statusColor, ago } from '../constants/roles';
 import { API_URL } from '../constants';
 import type { RouteInfo } from '../hooks/useRouting';
+import type { 
+  DashboardData, 
+  DashboardZone, 
+  DashboardResource, 
+  DashboardAlert, 
+  DashboardDispatch, 
+  DashboardReport, 
+  DashboardIncident,
+  TriageSession
+} from '../hooks/useDashboard';
 
 interface RolePanelContentProps {
   role: RoleId;
   tab: string;
-  data: any;
+  data: DashboardData | null;
   onRefresh: () => void;
   currentPoint?: [number, number] | null;
   onFindNearest?: (type: string) => void;
@@ -24,12 +34,12 @@ interface RolePanelContentProps {
 
 /* ── Shared helpers ─────────────────────────────────────── */
 
-function ZoneRows({ zones, onZoneClick }: { zones: any[]; onZoneClick?: (lat: number, lng: number) => void }) {
-  const maxD = Math.max(...zones.map((z: any) => z.depth_meters || 0), 1);
+function ZoneRows({ zones, onZoneClick }: { zones: DashboardZone[]; onZoneClick?: (lat: number, lng: number) => void }) {
+  const maxD = Math.max(...zones.map((z) => z.depth_meters || 0), 1);
   const sorted = [...zones].sort((a, b) => (b.depth_meters || 0) - (a.depth_meters || 0));
   return (
     <>
-      {sorted.map((z: any) => {
+      {sorted.map((z) => {
         const col = riskColor(z.risk_level);
         const pct = ((z.depth_meters || 0) / maxD * 100).toFixed(0);
         return (
@@ -52,7 +62,7 @@ function ZoneRows({ zones, onZoneClick }: { zones: any[]; onZoneClick?: (lat: nu
   );
 }
 
-function ResourceRow({ r, icon }: { r: any; icon?: string }) {
+function ResourceRow({ r, icon }: { r: DashboardResource; icon?: string }) {
   const sc = statusColor(r.status);
   const icons: Record<string, string> = {
     pump: '💧', rescue_boat: '🚤', ambulance: '🚑',
@@ -74,11 +84,11 @@ function ResourceRow({ r, icon }: { r: any; icon?: string }) {
   );
 }
 
-function AlertList({ alerts }: { alerts: any[] }) {
+function AlertList({ alerts }: { alerts: DashboardAlert[] }) {
   if (!alerts || alerts.length === 0) return <div className="cf-empty">No alerts</div>;
   return (
     <>
-      {alerts.map((x: any, i: number) => {
+      {alerts.map((x, i: number) => {
         const c: Record<string, string> = {
           evacuation: '#f87171', warning: '#fb923c', info: '#3b7bff', all_clear: '#4ade80',
         };
@@ -100,10 +110,10 @@ function AlertList({ alerts }: { alerts: any[] }) {
   );
 }
 
-function DispatchList({ dispatches, emptyLabel, onUpdateStatus }: { dispatches: any[]; emptyLabel?: string; onUpdateStatus?: (id: string, status: string) => void }) {
+function DispatchList({ dispatches, emptyLabel, onUpdateStatus }: { dispatches: DashboardDispatch[]; emptyLabel?: string; onUpdateStatus?: (id: string, status: string) => void }) {
   return (
     <>
-      {dispatches.length > 0 ? dispatches.map((d: any, i: number) => (
+      {dispatches.length > 0 ? dispatches.map((d, i: number) => (
         <div className="cf-report-card" key={i}>
           <div className="cf-rc-head">
             <span className="cf-rc-loc">{(d.resource_type || '').toUpperCase().replace(/_/g, ' ')} → {d.target_ward}</span>
@@ -244,7 +254,7 @@ function EmergencyFinder({
 
 /* ── Gov Content ────────────────────────────────────────── */
 
-function GovOverview({ data, onZoneClick }: { data: any, onZoneClick?: (lat: number, lng: number) => void }) {
+function GovOverview({ data, onZoneClick }: { data: DashboardData, onZoneClick?: (lat: number, lng: number) => void }) {
   const zones = data?.zones || [];
   const dispatches = data?.active_dispatches || [];
   const summary = data?.summary || {};
@@ -266,7 +276,7 @@ function GovOverview({ data, onZoneClick }: { data: any, onZoneClick?: (lat: num
   );
 }
 
-function CitizenReportsView({ data, onRefresh, role, onAssign }: { data: any; onRefresh?: () => void; role?: string; onAssign?: (r: any, to: string) => void }) {
+function CitizenReportsView({ data, onRefresh, role, onAssign }: { data: DashboardData; onRefresh?: () => void; role?: string; onAssign?: (r: DashboardReport, to: string) => void }) {
   const reports = data?.recent_reports || [];
 
   const handleVerify = async (reportId: string, currentStatus: boolean) => {
@@ -286,7 +296,7 @@ function CitizenReportsView({ data, onRefresh, role, onAssign }: { data: any; on
     <>
       <div className="cf-slabel">CITIZEN REPORTS ({reports.length})</div>
       {reports.length === 0 && <div className="cf-empty">No reports</div>}
-      {reports.map((r: any, i: number) => {
+      {reports.map((r, i: number) => {
         const timeStr = r.reported_at ? new Date(r.reported_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
         return (
           <div className="cf-report-card" key={i}>
@@ -353,16 +363,16 @@ function CitizenReportsView({ data, onRefresh, role, onAssign }: { data: any; on
   );
 }
 
-function GovResources({ data }: { data: any }) {
+function GovResources({ data }: { data: DashboardData }) {
   return (
     <>
       <div className="cf-slabel">ALL RESOURCES</div>
-      {(data?.resources || []).map((r: any, i: number) => <ResourceRow r={r} key={i} />)}
+      {(data?.resources || []).map((r, i: number) => <ResourceRow r={r} key={i} />)}
     </>
   );
 }
 
-function GovTriage({ data, onRefresh }: { data: any, onRefresh: () => void }) {
+function GovTriage({ data, onRefresh }: { data: DashboardData, onRefresh: () => void }) {
   const [status, setStatus] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [aiRunning, setAiRunning] = useState(false);
@@ -435,7 +445,7 @@ function GovTriage({ data, onRefresh }: { data: any, onRefresh: () => void }) {
       )}
       
       <div className="cf-slabel" style={{ marginTop: 14 }}>RECENT TRIAGE SESSIONS</div>
-      {sessions.length > 0 ? sessions.map((s: any, i: number) => (
+      {sessions.length > 0 ? sessions.map((s: TriageSession, i: number) => (
         <div className="cf-report-card" key={i}>
           <div className="cf-rc-head">
             <span className="cf-rc-loc" style={{ color: '#a78bfa' }}>{s.session_id}</span>
@@ -454,7 +464,7 @@ function GovTriage({ data, onRefresh }: { data: any, onRefresh: () => void }) {
 
 /* ── Police Content ─────────────────────────────────────── */
 
-function PoliceRoadBlocks({ data, barricadeMode, onToggleBarricade, onDeleteBarricade }: { data: any, barricadeMode?: boolean, onToggleBarricade?: () => void, onDeleteBarricade?: (id: string) => void }) {
+function PoliceRoadBlocks({ data, barricadeMode, onToggleBarricade, onDeleteBarricade }: { data: DashboardData, barricadeMode?: boolean, onToggleBarricade?: () => void, onDeleteBarricade?: (id: string) => void }) {
   const blocks = data?.active_road_blocks || [];
   return (
     <>
@@ -479,7 +489,7 @@ function PoliceRoadBlocks({ data, barricadeMode, onToggleBarricade, onDeleteBarr
       </button>
 
       <div className="cf-slabel">ROAD BLOCKS ({blocks.length})</div>
-      {blocks.map((b: any, i: number) => (
+      {blocks.map((b, i: number) => (
         <div className="cf-res-row" key={i}>
           <div className="cf-res-icon" style={{ background: '#0d2a1a', color: '#22c55e' }}>🚧</div>
           <div style={{ flex: 1 }}>
@@ -500,10 +510,10 @@ function PoliceRoadBlocks({ data, barricadeMode, onToggleBarricade, onDeleteBarr
   );
 }
 
-function IncidentList({ incidents, emptyLabel, onUpdateStatus, onDeploy }: { incidents: any[]; emptyLabel?: string; onUpdateStatus?: (id: string, status: string) => void; onDeploy?: (inc: any) => void }) {
+function IncidentList({ incidents, emptyLabel, onUpdateStatus, onDeploy }: { incidents: DashboardIncident[]; emptyLabel?: string; onUpdateStatus?: (id: string, status: string) => void; onDeploy?: (inc: DashboardIncident) => void }) {
   return (
     <>
-      {incidents.map((inc: any, i: number) => (
+      {incidents.map((inc, i: number) => (
         <div className="cf-report-card" key={i}>
           <div className="cf-rc-head">
             <span className="cf-rc-loc">{inc.location_name || ''}</span>
@@ -551,11 +561,11 @@ function IncidentList({ incidents, emptyLabel, onUpdateStatus, onDeploy }: { inc
 
 /* ── Hospital Content ───────────────────────────────────── */
 
-function HospitalCapacity({ data }: { data: any }) {
+function HospitalCapacity({ data }: { data: DashboardData }) {
   return (
     <>
       <div className="cf-slabel">BED AVAILABILITY</div>
-      {(data?.hospitals || []).map((h: any, i: number) => {
+      {(data?.hospitals || []).map((h, i: number) => {
         const wards = [
           { n: 'General', a: h.general_beds_available, t: h.general_beds_total },
           { n: 'ICU', a: h.icu_beds_available, t: h.icu_beds_total },
@@ -591,7 +601,7 @@ function HospitalCapacity({ data }: { data: any }) {
 
 /* ── Citizen Content ────────────────────────────────────── */
 
-function CitizenMyArea({ data }: { data: any }) {
+function CitizenMyArea({ data }: { data: DashboardData }) {
   const z = data?.zone || data?.zones?.[0] || {};
   const shelters = data?.evacuation_shelters || [];
   const isCritical = z.risk_level === 'critical' || z.risk_level === 'severe';
@@ -615,7 +625,7 @@ function CitizenMyArea({ data }: { data: any }) {
         </div>
       ))}
       <div className="cf-slabel" style={{ marginTop: 12 }}>SHELTERS</div>
-      {shelters.map((s: any, i: number) => (
+      {shelters.map((s, i: number) => (
         <div className="cf-res-row" key={i}>
           <div className="cf-res-icon" style={{ background: '#1a1040', color: '#a78bfa' }}>🏠</div>
           <div style={{ flex: 1 }}><div className="cf-res-name">{s.name}</div></div>
@@ -629,7 +639,7 @@ function CitizenReportForm({ onRefresh, currentPoint }: { onRefresh: () => void;
   const [desc, setDesc] = useState('');
   const [lat, setLat] = useState('');
   const [lng, setLng] = useState('');
-  const [reportTo, setReportTo] = useState('government');
+  const [reportTo] = useState('government');
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -750,7 +760,7 @@ export default function RolePanelContent({
       }
     };
 
-    const handleAssign = async (r: any, to: string) => {
+    const handleAssign = async (r: DashboardReport, to: string) => {
       try {
         const rid = r.report_id;
         const res = await fetch(`${API_URL}/api/citizen-reports/${rid}`, {
@@ -796,7 +806,7 @@ export default function RolePanelContent({
       }
     };
 
-    const handleIncidentDeploy = async (inc: any) => {
+    const handleIncidentDeploy = async (inc: DashboardIncident) => {
       try {
         await fetch(`${API_URL}/api/dispatches`, {
           method: 'POST',
@@ -846,16 +856,16 @@ export default function RolePanelContent({
   if (role === 'hospital') {
     if (tab === 'Capacity') return <HospitalCapacity data={data} />;
     if (tab === 'Fleet Management') {
-      const ambulances = (data.ambulances || resources).filter((r: any) => r.resource_type === 'ambulance');
+      const ambulances = (data.ambulances || resources).filter((r) => r.resource_type === 'ambulance');
       return (
         <>
           <div className="cf-slabel">AMBULANCE DISPATCHES</div>
           <DispatchList 
-            dispatches={dispatches.filter((d: any) => d.resource_type === 'ambulance')} 
+            dispatches={dispatches.filter((d) => d.resource_type === 'ambulance')} 
             onUpdateStatus={handleDispatchUpdate} 
           />
           <div className="cf-slabel" style={{ marginTop: 14 }}>FLEET STATUS</div>
-          {ambulances.map((r: any, i: number) => <ResourceRow r={r} icon="🚑" key={i} />)}
+          {ambulances.map((r, i: number) => <ResourceRow r={r} icon="🚑" key={i} />)}
         </>
       );
     }
@@ -867,8 +877,8 @@ export default function RolePanelContent({
   if (role === 'fire') {
     if (tab === 'Incidents') return <><div className="cf-slabel">FIRE INCIDENTS</div><IncidentList incidents={incidents} emptyLabel="None" /></>;
     if (tab === 'Resources') {
-      const fireRes = data.fire_resources || resources.filter((r: any) => r.owner_role === 'fire');
-      return <><div className="cf-slabel">FLEET</div>{fireRes.map((r: any, i: number) => <ResourceRow r={r} key={i} />)}</>;
+      const fireRes = data.fire_resources || resources.filter((r) => r.owner_role === 'fire');
+      return <><div className="cf-slabel">FLEET</div>{fireRes.map((r, i: number) => <ResourceRow r={r} key={i} />)}</>;
     }
     if (tab === 'Dispatches') return <><div className="cf-slabel">DISPATCHES</div><DispatchList dispatches={dispatches} emptyLabel="None" onUpdateStatus={handleDispatchUpdate} /></>;
   }

@@ -50,7 +50,7 @@ function App() {
   } = useRouting();
 
   // MongoDB dashboard data
-  const { data: dashboardData, fetchDashboard, runTriage, createBarricade, deleteBarricade } = useDashboard();
+  const { data: dashboardData, fetchDashboard, createBarricade, deleteBarricade } = useDashboard();
 
   // Role change handler
   const handleRoleChange = useCallback((role: RoleId) => {
@@ -68,7 +68,7 @@ function App() {
     document.documentElement.style.setProperty('--role-color', cfg.color);
     document.documentElement.style.setProperty('--role-bg', cfg.bg);
     document.documentElement.style.setProperty('--role-border', cfg.border);
-  }, []);
+  }, [currentRole]);
 
   const activeFloodPoints = useMemo((): FloodPoint[] => {
     if (currentTimestep === -2) return [];
@@ -218,19 +218,7 @@ function App() {
     }
   }, [deleteBarricade, recalculateRoute, intensity]);
 
-  const handlePrimaryAction = useCallback(async () => {
-    if (currentRole === 'gov') {
-      const result = await runTriage();
-      if (result) {
-        setAlert(`✓ Triage Commander complete. ${result.dispatch_count} units dispatched.`);
-        setTimeout(() => setAlert(null), 4000);
-        fetchDashboard('gov');
-      }
-    } else {
-      setAlert(`View action triggered for ${currentRole}. Details would expand here in production.`);
-      setTimeout(() => setAlert(null), 3000);
-    }
-  }, [currentRole, runTriage, fetchDashboard]);
+
 
   return (
     <div className="cf-shell">

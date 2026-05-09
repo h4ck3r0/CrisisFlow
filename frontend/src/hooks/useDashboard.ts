@@ -54,6 +54,8 @@ export interface DashboardRoadBlock {
   reason: string;
   depth_at_block: number;
   status: 'active' | 'cleared';
+  lat?: number;
+  lng?: number;
 }
 
 export interface DashboardReport {
@@ -82,6 +84,47 @@ export interface DashboardSummary {
   total_beds_available?: number;
   icu_available?: number;
   ambulances_available?: number;
+  average_depth?: number;
+}
+
+export interface DashboardAlert {
+  severity: 'evacuation' | 'warning' | 'info' | 'all_clear';
+  message?: string;
+  ward_name?: string;
+  channel?: string;
+  recipients_count?: number;
+  sent_at: string;
+}
+
+export interface DashboardDispatch {
+  order_id: string;
+  resource_id: string;
+  resource_type: string;
+  target_zone_id: string;
+  target_ward: string;
+  reason: string;
+  status: 'pending' | 'deployed' | 'complete' | 'cancelled';
+  dispatched_at: string;
+  dispatched_by: string;
+}
+
+export interface DashboardIncident {
+  incident_id: string;
+  incident_type: string;
+  zone_id: string;
+  location_name: string;
+  severity: string;
+  status: 'pending' | 'active' | 'resolved';
+  notes?: string;
+  reported_at?: string;
+}
+
+export interface TriageSession {
+  session_id: string;
+  started_at: string;
+  status: 'running' | 'complete' | 'failed';
+  dispatch_count: number;
+  population_covered: number;
 }
 
 export interface DashboardData {
@@ -90,23 +133,24 @@ export interface DashboardData {
   hospitals: DashboardHospital[];
   active_road_blocks: DashboardRoadBlock[];
   recent_reports: DashboardReport[];
-  recent_alerts: any[];
-  active_dispatches: any[];
+  recent_alerts: DashboardAlert[];
+  active_dispatches: DashboardDispatch[];
   summary: DashboardSummary;
   // Police-specific
   police_resources?: DashboardResource[];
-  active_incidents?: any[];
+  active_incidents?: DashboardIncident[];
   // Fire-specific
   fire_resources?: DashboardResource[];
-  fire_incidents?: any[];
+  fire_incidents?: DashboardIncident[];
   // Hospital-specific
   ambulances?: DashboardResource[];
-  incoming_medical_incidents?: any[];
+  incoming_medical_incidents?: DashboardIncident[];
   // Citizen-specific
   zone?: DashboardZone;
   evacuation_shelters?: { name: string; lat: number; lng: number }[];
   road_blocks?: DashboardRoadBlock[];
-  alerts?: any[];
+  alerts?: DashboardAlert[];
+  triage_sessions?: TriageSession[];
 }
 
 type RoleType = RoleId;
@@ -195,7 +239,14 @@ export function useDashboard() {
 
   // Auto-fetch government dashboard on mount
   useEffect(() => {
-    fetchDashboard('gov');
+    let isMounted = true;
+    const initFetch = async () => {
+      if (isMounted) {
+        await fetchDashboard('gov');
+      }
+    };
+    initFetch();
+    return () => { isMounted = false; };
   }, [fetchDashboard]);
 
   return {
