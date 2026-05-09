@@ -4,7 +4,7 @@ import { Map } from 'react-map-gl/maplibre';
 import { GeoJsonLayer, ScatterplotLayer, PathLayer, TextLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 import { LightingEffect, AmbientLight, DirectionalLight } from '@deck.gl/core';
-import { INFRA_COLORS, FLOOD_COLOR_RANGE } from '../constants';
+import { INFRA_COLORS, FLOOD_COLOR_RANGE, API_URL } from '../constants';
 import type { FloodPoint, EmergencyFacility, ViewState, RouteSegment } from '../types';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -67,7 +67,7 @@ export default function MapView({
     const allLayers = [
       new GeoJsonLayer({
         id: 'buildings-3d',
-        data: `http://127.0.0.1:8000/geojson/buildings`,
+        data: `${API_URL}/geojson/buildings`,
         filled: true,
         extruded: is3D,
         wireframe: is3D,
@@ -95,7 +95,7 @@ export default function MapView({
 
       new GeoJsonLayer({
         id: 'water-bodies',
-        data: `http://127.0.0.1:8000/geojson/water`,
+        data: `${API_URL}/geojson/water`,
         filled: true,
         extruded: false,
         getFillColor: [15, 60, 130, 160],

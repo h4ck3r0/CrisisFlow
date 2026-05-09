@@ -1,6 +1,6 @@
 import type { EmergencyFacility, ViewState } from '../types';
 
-export const API_URL = 'http://127.0.0.1:8000';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export const INITIAL_VIEW_STATE: ViewState = {
   longitude: 77.6450,
