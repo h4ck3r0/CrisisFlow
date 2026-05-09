@@ -208,7 +208,7 @@ async def seed_database(db: AsyncIOMotorDatabase):
             "description": "Water entered ground floor of apartment complex near Bellandur lake",
             "photo_url": None, "gemini_depth_estimate": 1.2, "gemini_confidence": 0.87,
             "verified": True, "lat": 12.9260, "lng": 77.6700,
-            "reported_at": now - timedelta(hours=2), "deleted_at": None,
+            "reported_at": now - timedelta(hours=2), "send_msg": False, "deleted_at": None,
         },
         {
             "report_id": "CR-002", "zone_id": "zone-silkboard", "ward_name": "Silk Board Junction",
@@ -216,14 +216,14 @@ async def seed_database(db: AsyncIOMotorDatabase):
             "photo_url": "https://example.com/flood-silkboard.jpg",
             "gemini_depth_estimate": 1.0, "gemini_confidence": 0.92,
             "verified": True, "lat": 12.9175, "lng": 77.6225,
-            "reported_at": now - timedelta(hours=4), "deleted_at": None,
+            "reported_at": now - timedelta(hours=4), "send_msg": False, "deleted_at": None,
         },
         {
             "report_id": "CR-003", "zone_id": "zone-hsr", "ward_name": "HSR Layout",
             "description": "HSR Sector 2 main road flooded. Unable to reach main road.",
             "photo_url": None, "gemini_depth_estimate": None, "gemini_confidence": None,
             "verified": False, "lat": 12.9190, "lng": 77.6450,
-            "reported_at": now - timedelta(minutes=45), "deleted_at": None,
+            "reported_at": now - timedelta(minutes=45), "send_msg": False, "deleted_at": None,
         },
         {
             "report_id": "CR-004", "zone_id": "zone-sarjapur", "ward_name": "Sarjapur Road",
@@ -231,14 +231,14 @@ async def seed_database(db: AsyncIOMotorDatabase):
             "photo_url": "https://example.com/drain-overflow.jpg",
             "gemini_depth_estimate": 0.6, "gemini_confidence": 0.78,
             "verified": True, "lat": 12.9110, "lng": 77.6750,
-            "reported_at": now - timedelta(hours=1), "deleted_at": None,
+            "reported_at": now - timedelta(hours=1), "send_msg": False, "deleted_at": None,
         },
         {
             "report_id": "CR-005", "zone_id": "zone-koramangala", "ward_name": "Koramangala",
             "description": "Minor waterlogging on 80 Feet Road. Drains coping for now.",
             "photo_url": None, "gemini_depth_estimate": 0.2, "gemini_confidence": 0.65,
             "verified": False, "lat": 12.9360, "lng": 77.6210,
-            "reported_at": now - timedelta(minutes=20), "deleted_at": None,
+            "reported_at": now - timedelta(minutes=20), "send_msg": False, "deleted_at": None,
         },
     ]
 

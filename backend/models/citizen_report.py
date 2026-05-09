@@ -16,6 +16,7 @@ class CitizenReportCreate(BaseModel):
     lat: Optional[float] = None
     lng: Optional[float] = None
     report_to: str = "government"
+    send_msg: bool = False
 
 
 class CitizenReportUpdate(BaseModel):
@@ -25,6 +26,7 @@ class CitizenReportUpdate(BaseModel):
     gemini_confidence: Optional[float] = None
     verified: Optional[bool] = None
     report_to: Optional[str] = None
+    send_msg: Optional[bool] = None
 
 
 class CitizenReportInDB(CitizenReportCreate):

@@ -61,6 +61,7 @@ async def get_report(report_id: str, db: AsyncIOMotorDatabase = Depends(get_db))
 @router.post("", response_model=CitizenReportResponse, status_code=201)
 async def create_report(body: CitizenReportCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
     record = CitizenReportInDB(**body.model_dump())
+    record.send_msg = False  # Ensure send_msg is always False on creation
     doc = record.model_dump()
     try:
         await db.citizen_reports.insert_one(doc)
@@ -108,6 +109,7 @@ async def quick_report(body: QuickReportRequest, db: AsyncIOMotorDatabase = Depe
         lat=body.lat,
         lng=body.lng,
         report_to=report_to_val,
+        send_msg=False,
     )
     doc = record.model_dump()
     await db.citizen_reports.insert_one(doc)
