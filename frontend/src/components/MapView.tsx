@@ -28,6 +28,7 @@ interface MapViewProps {
   routeSegments: RouteSegment[];
   onMapClick: (coordinate: [number, number]) => void;
   currentPoint: [number, number] | null;
+  roadBlocks: any[];
 }
 
 const ambientLight = new AmbientLight({
@@ -64,6 +65,7 @@ export default function MapView({
   routeSegments,
   onMapClick,
   currentPoint,
+  roadBlocks,
 }: MapViewProps) {
   const layers = useMemo(() => {
     const allLayers = [
@@ -198,7 +200,8 @@ export default function MapView({
         getPath: (d: any) => d.path,
         getColor: [0, 180, 255, 40],
         getWidth: 14,
-        rounded: true,
+        jointRounded: true,
+        capRounded: true,
       }),
 
       new PathLayer({
@@ -211,7 +214,8 @@ export default function MapView({
         getPath: (d: RouteSegment) => d.path as any,
         getColor: (d: RouteSegment) => d.color,
         getWidth: 5,
-        rounded: true,
+        jointRounded: true,
+        capRounded: true,
       }),
 
       new ScatterplotLayer({
@@ -229,10 +233,37 @@ export default function MapView({
         getFillColor: [255, 255, 0, 200],
         getLineColor: [255, 255, 255, 255],
       }),
+
+      new ScatterplotLayer({
+        id: 'road-block-bg',
+        data: roadBlocks,
+        pickable: false,
+        getPosition: (d: any) => [d.lon, d.lat],
+        getRadius: 20,
+        getFillColor: [0, 0, 0, 200],
+        getLineColor: [245, 158, 11, 255],
+        lineWidthMinPixels: 2,
+      }),
+
+      new IconLayer({
+        id: 'road-blocks',
+        data: roadBlocks,
+        pickable: true,
+        getPosition: (d: any) => [d.lon, d.lat],
+        getIcon: () => ({
+          url: `data:image/svg+xml;base64,${btoa('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M17 3v3"/><path d="M7 3v3"/><path d="M10 14 2.3 6.3"/><path d="m14 6 7.7 7.7"/><path d="m8 6 8 8"/></svg>')}`,
+          width: 24,
+          height: 24,
+          anchorY: 12,
+          mask: false,
+        }),
+        getSize: 40,
+        sizeScale: 1,
+      }),
     ];
 
     return allLayers;
-  }, [is3D, activeFloodPoints, emergencyData, clickPoints, routeCoords, routeSegments, currentPoint]);
+  }, [is3D, activeFloodPoints, emergencyData, clickPoints, routeCoords, routeSegments, currentPoint, roadBlocks]);
 
   const effects = useMemo(() => (is3D ? [lightingEffect] : []), [is3D]);
 
@@ -267,6 +298,24 @@ export default function MapView({
         },
       };
     }
+
+    if (object.block_id) {
+      return {
+        html: `<div style="font-family:Inter,sans-serif">
+          <strong style="color:#f59e0b;font-size:14px;font-family:Outfit,sans-serif">${object.block_id}</strong><br/>
+          <span style="color:#8b9bb4;font-size:11px;text-transform:uppercase">Police Barricade</span><br/>
+          <span style="color:white;font-size:12px">${object.road_name || 'Manual Block'}</span><br/>
+          <span style="color:#fbbf24;font-weight:600;font-size:11px">STATUS: ACTIVE</span>
+        </div>`,
+        style: {
+          backgroundColor: 'rgba(25, 20, 10, 0.95)',
+          border: '1px solid #f59e0b',
+          borderRadius: '10px',
+          padding: '12px 16px',
+        },
+      };
+    }
+
     if (object.name && object.type) {
       const accessible = object.accessible !== false;
       const statusText = accessible ? '✅ Accessible' : '❌ Flooded Area';
@@ -300,7 +349,9 @@ export default function MapView({
       effects={effects}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onClick={(info: any) => {
-        if (info.coordinate) {
+        if (info.object && typeof info.object.lon === 'number' && typeof info.object.lat === 'number') {
+          onMapClick([info.object.lon, info.object.lat]);
+        } else if (info.coordinate) {
           onMapClick(info.coordinate as [number, number]);
         }
       }}

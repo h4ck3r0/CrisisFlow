@@ -72,6 +72,42 @@ class RouteRequest(BaseModel):
     end_lon: float
     intensity: float
 
+class BarricadeRequest(BaseModel):
+    lat: float
+    lon: float
+    road_name: str = "Manual Barricade"
+    reason: str = "Police Intervention"
+
+@stgcn_router.post("/barricade")
+async def create_barricade(req: BarricadeRequest):
+    nearest_node = ox.distance.nearest_nodes(G, req.lon, req.lat)
+    node_data = G.nodes[nearest_node]
+    
+    import database
+    import uuid
+    from datetime import datetime, timezone
+    
+    block_id = f"BLOCK-{uuid.uuid4().hex[:6].upper()}"
+    doc = {
+        "block_id": block_id,
+        "road_name": req.road_name,
+        "zone_id": "manual",
+        "reason": req.reason,
+        "lat": float(node_data['y']),
+        "lon": float(node_data['x']),
+        "node_id": int(nearest_node),
+        "depth_at_block": 0.0,
+        "blocked_by": "police",
+        "status": "active",
+        "blocked_at": datetime.now(timezone.utc),
+        "deleted_at": None
+    }
+    
+    if database.db is not None:
+        await database.db.road_blocks.insert_one(doc)
+    
+    return {"status": "success", "block_id": block_id, "node_id": int(nearest_node)}
+
 @stgcn_router.get("/geojson/buildings")
 def get_buildings():
     return FileResponse(os.path.join(BASE_DIR, "kc_valley_buildings.geojson"), media_type="application/json")
@@ -320,12 +356,26 @@ async def get_route(req: RouteRequest):
     orig = ox.distance.nearest_nodes(G, req.start_lon, req.start_lat)
     dest = ox.distance.nearest_nodes(G, req.end_lon, req.end_lat)
 
+    # Fetch manual road blocks (barricades) from MongoDB
+    import database
+    blocked_nodes = set()
+    if database.db is not None:
+        cursor = database.db.road_blocks.find({"status": "active", "deleted_at": None})
+        async for rb in cursor:
+            if rb.get("node_id"):
+                blocked_nodes.add(rb["node_id"])
+
     G_routing = G.copy()
     for u, v, k, edata in G_routing.edges(keys=True, data=True):
         length = float(edata.get('length', 1.0))
-        d_u = depth_lookup.get(u, 0.0)
-        d_v = depth_lookup.get(v, 0.0)
-        edata['flood_weight'] = compute_flood_weight(length, d_u, d_v)
+        
+        # If either end of the edge is blocked by a barricade, make it impassable
+        if u in blocked_nodes or v in blocked_nodes:
+            edata['flood_weight'] = 9999999.0
+        else:
+            d_u = depth_lookup.get(u, 0.0)
+            d_v = depth_lookup.get(v, 0.0)
+            edata['flood_weight'] = compute_flood_weight(length, d_u, d_v)
 
     try:
         path = nx.dijkstra_path(G_routing, orig, dest, weight='flood_weight')
@@ -388,12 +438,24 @@ async def get_nearest_route(req: NearestRequest):
         orig = ox.distance.nearest_nodes(G, req.lon, req.lat)
         dest = nearest_f_node
 
+        # Fetch manual road blocks (barricades) from MongoDB
+        import database
+        blocked_nodes = set()
+        if database.db is not None:
+            cursor = database.db.road_blocks.find({"status": "active", "deleted_at": None})
+            async for rb in cursor:
+                if rb.get("node_id"):
+                    blocked_nodes.add(rb["node_id"])
+
         G_routing = G.copy()
         for u, v, k, edata in G_routing.edges(keys=True, data=True):
             length = float(edata.get('length', 1.0))
-            d_u = depth_lookup.get(u, 0.0)
-            d_v = depth_lookup.get(v, 0.0)
-            edata['flood_weight'] = compute_flood_weight(length, d_u, d_v)
+            if u in blocked_nodes or v in blocked_nodes:
+                edata['flood_weight'] = 9999999.0
+            else:
+                d_u = depth_lookup.get(u, 0.0)
+                d_v = depth_lookup.get(v, 0.0)
+                edata['flood_weight'] = compute_flood_weight(length, d_u, d_v)
 
         try:
             path = nx.dijkstra_path(G_routing, orig, dest, weight='flood_weight')

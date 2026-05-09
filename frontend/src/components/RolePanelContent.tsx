@@ -16,6 +16,9 @@ interface RolePanelContentProps {
   routeColor?: string;
   hasStartPoint?: boolean;
   onZoneClick?: (lat: number, lng: number) => void;
+  barricadeMode?: boolean;
+  onToggleBarricade?: () => void;
+  onDeleteBarricade?: (id: string) => void;
 }
 
 /* ── Shared helpers ─────────────────────────────────────── */
@@ -445,10 +448,30 @@ function GovTriage({ data, onRefresh }: { data: any, onRefresh: () => void }) {
 
 /* ── Police Content ─────────────────────────────────────── */
 
-function PoliceRoadBlocks({ data }: { data: any }) {
+function PoliceRoadBlocks({ data, barricadeMode, onToggleBarricade, onDeleteBarricade }: { data: any, barricadeMode?: boolean, onToggleBarricade?: () => void, onDeleteBarricade?: (id: string) => void }) {
   const blocks = data?.active_road_blocks || [];
   return (
     <>
+      <div className="cf-slabel">MANUAL BARRICADES</div>
+      <button 
+        className={`cf-action-btn ${barricadeMode ? 'active' : ''}`}
+        style={{ 
+          background: barricadeMode ? '#dc2626' : '#1e293b', 
+          borderColor: barricadeMode ? '#ef4444' : '#334155',
+          color: '#fff',
+          marginBottom: 16
+        }}
+        onClick={onToggleBarricade}
+      >
+        <span>🚧</span>
+        <div>
+          <div>{barricadeMode ? 'CANCEL PLACEMENT' : 'PLACE MANUAL BARRICADE'}</div>
+          <div className="cf-ab-sub" style={{ color: barricadeMode ? '#fecaca' : '#94a3b8' }}>
+            {barricadeMode ? 'Click map to place' : 'Snap barricade to road node'}
+          </div>
+        </div>
+      </button>
+
       <div className="cf-slabel">ROAD BLOCKS ({blocks.length})</div>
       {blocks.map((b: any, i: number) => (
         <div className="cf-res-row" key={i}>
@@ -457,9 +480,13 @@ function PoliceRoadBlocks({ data }: { data: any }) {
             <div className="cf-res-name">{b.road_name}</div>
             <div className="cf-res-sub">{b.reason} · {b.depth_at_block}m</div>
           </div>
-          <span className="cf-res-status" style={{ background: statusColor(b.status) + '18', color: statusColor(b.status) }}>
-            {(b.status || '').toUpperCase()}
-          </span>
+          <button 
+            className="cf-mini-btn" 
+            style={{ color: '#f87171', borderColor: '#f8717144' }}
+            onClick={() => onDeleteBarricade?.(b.block_id)}
+          >
+            REMOVE
+          </button>
         </div>
       ))}
       {blocks.length === 0 && <div className="cf-empty">No road blocks</div>}
@@ -680,6 +707,7 @@ export default function RolePanelContent({
   role, tab, data, onRefresh,
   currentPoint, onFindNearest, routeInfo, routeStatus, routeColor, hasStartPoint,
   onZoneClick,
+  barricadeMode, onToggleBarricade, onDeleteBarricade,
 }: RolePanelContentProps) {
   if (!data) return <div className="cf-empty">Loading...</div>;
 
@@ -806,7 +834,7 @@ export default function RolePanelContent({
   // Police
   if (role === 'police') {
     if (tab === 'Zones') return <><div className="cf-slabel">FLOOD ZONES</div><ZoneRows zones={zones} onZoneClick={onZoneClick} /></>;
-    if (tab === 'Road Blocks') return <PoliceRoadBlocks data={data} />;
+    if (tab === 'Road Blocks') return <PoliceRoadBlocks data={data} barricadeMode={barricadeMode} onToggleBarricade={onToggleBarricade} onDeleteBarricade={onDeleteBarricade} />;
     if (tab === 'Incidents') return <><div className="cf-slabel">INCIDENTS</div><IncidentList incidents={incidents} onUpdateStatus={handleIncidentUpdate} onDeploy={handleIncidentDeploy} /></>;
     if (tab === 'Alerts') return <><div className="cf-slabel">ALERTS</div><AlertList alerts={alerts} /></>;
     if (tab === 'Reports') return <CitizenReportsView data={data} onRefresh={onRefresh} role={role} onAssign={handleAssign} />;
