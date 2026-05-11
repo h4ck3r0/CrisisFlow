@@ -1,32 +1,37 @@
-# 🚨 CrisisFlow
+# 🚨 CrisisFlow: Real-Time 3D Digital Twin Command Center
 
-**An Intelligent, Multi-Role Crisis Management Platform for Urban Disasters**
+**A Living City Replica Powered by Live Weather, AI Predictions & Real Geospatial Data**
 
-CrisisFlow is a unified command center designed to coordinate emergency response across multiple stakeholders during urban crises—particularly floods. It combines AI-powered flood simulation, real-time resource management, and role-based dashboards to empower government, emergency services, and citizens with actionable intelligence.
+CrisisFlow is a digital twin platform that creates a real-time, 3D virtual replica of Bangalore for crisis management. It integrates live weather data from Open-Meteo, AI-powered flood predictions with STGCN, and actual city geospatial data to coordinate emergency response across government, police, hospitals, fire departments, and citizens during urban disasters.
 
 ---
 
 ## 🎯 What is CrisisFlow?
 
-When a crisis strikes—like urban flooding—coordination between government, police, hospitals, and fire departments is critical. CrisisFlow solves this by:
+**A 3D Digital Twin City for Crisis Response**
 
-- **Predicting** flood progression using an AI-powered STGCN (Spatio-Temporal Graph Convolutional Network) digital twin
-- **Coordinating** resources across agencies through a unified dashboard
-- **Tracking** incidents, dispatches, and citizen reports in real-time
-- **Optimizing** emergency routes and resource allocation
-- **Communicating** crisis information to different stakeholder roles
+When a crisis strikes—like urban flooding—coordination between government, police, hospitals, and fire departments is critical. CrisisFlow solves this by creating a **living 3D replica of the city** that combines:
 
-Think of it as a **command center dashboard** that speaks the language of every emergency responder.
+- **Real 3D City Map**: Authentic Bangalore with actual building footprints, roads, and water networks from OpenStreetMap
+- **Live Weather Integration**: Real-time rainfall & precipitation data (Open-Meteo API, refreshed every 30 seconds)
+- **AI-Powered Flood Prediction**: STGCN neural network forecasts water spread on the digital twin
+- **Unified Emergency Dashboard**: Multi-role command center for government, police, hospitals, fire, and citizens
+- **Real-Time Resource Coordination**: Track and dispatch resources across the city instantly
+- **Interactive 3D/2D Views**: Immersive visualization of crisis zones and emergency response
+
+Think of it as **watching your city in real-time** while an AI predicts what happens next—and coordinating every emergency responder with one integrated platform.
 
 ---
 
 ## ✨ Key Features
 
-### 1. **AI-Powered Flood Forecasting** 🌊
-- **STGCN Digital Twin**: Neural network model that learns and predicts flood patterns
-- **Spatio-temporal analysis**: Understands how water flows through geography over time
-- **Real-time simulation**: Adjustable flood intensity and depth thresholds
-- Trained on historical geospatial data (building geometry, water networks, terrain)
+### 1. **Real-Time 3D Digital Twin** 🌊
+- **Live Geospatial Map**: Real Bangalore city with actual building footprints, water networks, and terrain from OpenStreetMap
+- **3D/2D Visualization**: High-performance Deck.gl rendering for immersive city view
+- **AI Flood Forecasting**: STGCN neural network predicts water spread with live weather data
+- **Live Weather Integration**: Real-time rainfall & precipitation from Open-Meteo API (updated every 30 seconds)
+- **Real-time Simulation**: Adjustable flood intensity and depth thresholds on the digital twin
+- **Hybrid Approach**: Combines real geospatial data + AI predictions + live environmental sensors
 
 ### 2. **Multi-Role Dashboards** 👥
 Each stakeholder sees a tailored view:
@@ -46,12 +51,13 @@ Each stakeholder sees a tailored view:
 - **Road Blocks**: Manage traffic control and evacuation routes
 - **Triage Sessions**: Medical resource coordination
 
-### 4. **Interactive Geospatial Mapping** 🗺️
-- **Deck.gl visualization**: High-performance 3D/2D mapping
-- **Geospatial layers**: Buildings, water networks, zones
-- **Flood overlay**: Visual representation of predicted flood progression
-- **Interactive controls**: Click to place markers, draw routes, manage barriers
-- **Weather integration**: Real-time weather status display
+### 4. **Interactive 3D City Digital Twin** 🗺️
+- **Real Geospatial Base**: Authentic Bangalore city with building geometries, roads systems
+- **3D/2D Toggle**: Switch between immersive 3D view and 2D tactical view
+- **Live Layer Stacking**: Buildings, water networks, flood zones, resource locations all on one map
+- **Dynamic Flood Overlay**: Animated water progression based on AI predictions + real weather
+- **Interactive Controls**: Click to place markers, draw evacuation routes, deploy resources on the digital twin
+- **Real-time Indicators**: Weather status, traffic conditions, incident markers update live
 
 ### 5. **Route Optimization & Logistics** 🛣️
 - Find optimal paths for emergency vehicles
@@ -123,22 +129,23 @@ frontend/
    cd crisisflow/backend
    ```
 
-2. **Create a virtual environment**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. **Install dependencies**
+2. **Install Python dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-4. **Configure environment**
+3. **Configure environment**
    Create a `.env` file:
    ```
    MONGODB_URL=mongodb://localhost:27017
    DATABASE_NAME=crisisflow
+   WEATHER_API_URL=https://api.open-meteo.com/v1/forecast?latitude=12.935&longitude=77.645&current=rain,precipitation&timezone=Asia/Kolkata
+   ```
+
+4. **Create a virtual environment** (optional but recommended)
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 5. **Start the backend**
@@ -200,28 +207,34 @@ frontend/
 - `GET /api/citizen-reports` - Crowd-sourced crisis reports
 - `POST /api/citizen-reports` - Submit incident report
 
-### AI Simulation
-- `POST /api/simulate-flood` - Run STGCN flood prediction
+### AI Simulation & Weather
+- `GET /api/weather` - Get real-time rainfall (Open-Meteo API integration)
+- `POST /api/simulate-flood` - Run STGCN flood prediction with current weather
 - `GET /api/simulation/{id}` - Get simulation results
 
 ---
 
-## 🧠 How the STGCN Digital Twin Works
+## 🧠 How the Digital Twin Works
 
-The **STGCN (Spatio-Temporal Graph Convolutional Network)** is a neural network trained on historical flood data to predict how water spreads across the city.
+The **Digital Twin** is a real-time virtual replica of Bangalore that combines:
+- **Real geospatial data** (actual city geometry)
+- **Live weather feeds** (real rainfall from Open-Meteo API)
+- **AI predictions** (STGCN neural network)
+- **3D visualization** (immersive city view)
 
 **Process:**
-1. **Graph Construction**: Represents the city as a graph where nodes are zones/buildings and edges are water flow paths
-2. **Temporal Modeling**: Uses sequences of past flood states to predict future ones
-3. **Spatial Convolution**: Each location's water level considers nearby locations
-4. **Prediction**: Generates minute-by-minute or hour-by-hour flood progression
-5. **Visualization**: Results overlay on the interactive map as heatmaps
+1. **Real Geospatial Foundation**: Base map loaded with actual buildings, roads, water networks from OpenStreetMap
+2. **Live Weather Input**: Real rainfall data from Open-Meteo API (refreshed every 30 seconds)
+3. **Graph Construction**: City represented as graph where nodes = zones/buildings, edges = water flow paths
+4. **STGCN Prediction**: AI model uses past flood patterns + current weather to forecast water spread
+5. **Temporal Modeling**: Sequences of past states + current conditions → minute-by-minute predictions
+6. **3D Visualization**: Predictions render as animated water levels on the real city map
 
-**Training Data:**
-- Building footprints (GeoJSON)
-- Water networks and drainage systems
-- Historical weather and incident records
-- Terrain elevation data (OpenStreetMap)
+**Data Integration:**
+- **Real-time**: Live weather (Open-Meteo API), incident reports, resource locations
+- **Real Geospatial**: Building footprints, drainage systems, terrain elevation (OpenStreetMap)
+- **Historical**: Past flood events and weather records (model training data)
+- **Result**: A living, breathing digital replica that mirrors reality
 
 ---
 
@@ -429,7 +442,8 @@ python seed.py
 | **Database** | MongoDB + Motor | Flexible schema, async driver |
 | **AI/ML** | PyTorch Geometric | Graph neural networks for spatial data |
 | **Frontend** | React + TypeScript | Component reusability, type safety |
-| **Mapping** | Deck.gl | 60fps 3D rendering for large datasets |
+| **3D Mapping** | Deck.gl | 60fps 3D rendering for real geospatial data |
+| **Weather API** | Open-Meteo | Free, real-time rainfall data for Bangalore |
 | **Build** | Vite | 10x faster than Webpack |
 
 ---
